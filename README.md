@@ -45,6 +45,19 @@ yarn build
 
 Os arquivos serão gerados no diretório `dist/`.
 
+## Configuração do Banco de Dados (Supabase)
+
+1. Crie uma conta no [Supabase](https://supabase.com/)
+2. Crie um novo projeto
+3. No painel do projeto, vá para "Table Editor"
+4. Execute o script SQL do arquivo [supabase-schema.sql](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\Atelie\supabase-schema.sql) para criar as tabelas necessárias
+5. Obtenha a URL do projeto e a chave anônima em "Project Settings" > "API"
+6. Atualize o arquivo [.env](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\Atelie\.env) com essas informações:
+   ```
+   VITE_SUPABASE_URL="sua_url_do_supabase"
+   VITE_SUPABASE_ANON_KEY="sua_chave_anonima"
+   ```
+
 ## Implantação no Netlify
 
 1. Faça login no Netlify

@@ -26,7 +26,8 @@ async function testConnection() {
     // Tenta buscar dados da tabela products (se existir)
     const { data, error } = await supabase
       .from('products')
-      .select('count()');
+      .select('*')
+      .limit(1);
     
     if (error) {
       console.error('Erro ao conectar com o Supabase:', error.message);

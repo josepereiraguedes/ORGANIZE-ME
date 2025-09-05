@@ -57,3 +57,17 @@ Os arquivos serão gerados no diretório `dist/`.
    - `VITE_SUPABASE_ANON_KEY` (sua chave anônima do Supabase)
 
 O site será automaticamente implantado após o push para o repositório.
+
+## Implantação no GitHub
+
+Para implantar o código no GitHub, siga estas etapas:
+
+1. Substitua "seu-usuario" e "nome-do-repositorio" no arquivo [deploy-github.ps1](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\Atelie\deploy-github.ps1) pelos seus valores reais
+2. Crie um token de acesso pessoal no GitHub em https://github.com/settings/tokens
+3. Execute o script no PowerShell:
+   ```powershell
+   .\deploy-github.ps1
+   ```
+4. Quando solicitado, insira seu token de acesso pessoal
+
+Após a execução bem-sucedida, seu código estará disponível no repositório do GitHub.

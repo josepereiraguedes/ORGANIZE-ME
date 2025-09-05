@@ -36,10 +36,11 @@ if ($remote) {
 } else {
     Write-Host "Nenhum remote configurado." -ForegroundColor Yellow
     Write-Host "Instruções:" -ForegroundColor Cyan
-    Write-Host "1. Crie um repositório vazio no GitHub" -ForegroundColor White
+    Write-Host "1. Crie um repositório vazio no GitHub (veja INSTRUCOES-GITHUB.md)" -ForegroundColor White
     Write-Host "2. Execute o comando: git remote add origin https://github.com/seu-usuario/seu-repositorio.git" -ForegroundColor White
     Write-Host "3. Depois execute: git push -u origin main" -ForegroundColor White
 }
 
 Write-Host ""
 Write-Host "Processo concluído!" -ForegroundColor Green
+Write-Host "Veja INSTRUCOES-GITHUB.md para detalhes sobre como criar o repositório." -ForegroundColor Yellow

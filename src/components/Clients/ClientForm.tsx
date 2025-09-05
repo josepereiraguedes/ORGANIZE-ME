@@ -44,6 +44,7 @@ const ClientForm: React.FC = () => {
       }
       navigate('/clients');
     } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
       toast.error('Erro ao salvar cliente');
     } finally {
       setIsLoading(false);

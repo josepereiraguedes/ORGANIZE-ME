@@ -20,6 +20,7 @@ const Clients: React.FC = () => {
         await deleteClient(id);
         toast.success('Cliente excluído com sucesso!');
       } catch (error) {
+        console.error('Erro ao excluir cliente:', error);
         toast.error('Erro ao excluir cliente');
       }
     }

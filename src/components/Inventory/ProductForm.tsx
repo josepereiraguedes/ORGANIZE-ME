@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Save, Upload, X } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { useDatabase } from '../../contexts/DatabaseContext';
 import toast from 'react-hot-toast';
 
@@ -83,6 +83,7 @@ const ProductForm: React.FC = () => {
       }
       navigate('/inventory');
     } catch (error) {
+      console.error('Erro ao salvar produto:', error);
       toast.error('Erro ao salvar produto');
     } finally {
       setIsLoading(false);

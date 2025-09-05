@@ -57,6 +57,7 @@ const TransactionForm: React.FC = () => {
       toast.success('Transação registrada com sucesso!');
       navigate('/sales');
     } catch (error) {
+      console.error('Erro ao registrar transação:', error);
       toast.error('Erro ao registrar transação');
     } finally {
       setIsLoading(false);

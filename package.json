@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prebuild": "npm rebuild --platform=linux --arch=x64"
+    "prebuild": "npm rebuild --platform=linux --arch=x64",
+    "start": "vite",
+    "test": "echo \"Error: no test specified\" && exit 0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

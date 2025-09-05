@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Package, DollarSign, TrendingUp, AlertTriangle, Users, Clock } from 'lucide-react';
+import { Package, DollarSign, TrendingUp, Clock } from 'lucide-react';
 import { useDatabase, FinancialSummary } from '../contexts/DatabaseContext';
 import { motion } from 'framer-motion';
 import ReactECharts from 'echarts-for-react';

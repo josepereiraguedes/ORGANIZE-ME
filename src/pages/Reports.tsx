@@ -102,13 +102,14 @@ const Reports: React.FC = () => {
         : [['Produto', 'Categoria', 'Estoque', 'Status', 'Valor Custo (R$)']];
       
       const body = selectedReport === 'sales'
-        ? (currentReportData as any[]).map(item => [item.name, item.quantity, item.revenue.toFixed(2), item.profit.toFixed(2)])
-        : (currentReportData as any[]).map(item => [item.name, item.category, item.currentStock, item.status, item.stockValue.toFixed(2)]);
+        ? (currentReportData as Array<{name: string, quantity: number, revenue: number, profit: number}>).map(item => [item.name, item.quantity, item.revenue.toFixed(2), item.profit.toFixed(2)])
+        : (currentReportData as Array<{name: string, category: string, currentStock: number, status: string, stockValue: number}>).map(item => [item.name, item.category, item.currentStock, item.status, item.stockValue.toFixed(2)]);
 
       autoTable(doc, { startY: 35, head, body });
       doc.save(`relatorio-${selectedReport}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
       toast.success('PDF exportado com sucesso!');
     } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
       toast.error('Erro ao exportar PDF');
     }
   };
@@ -121,6 +122,7 @@ const Reports: React.FC = () => {
       XLSX.writeFile(wb, `relatorio-${selectedReport}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
       toast.success('Excel exportado com sucesso!');
     } catch (error) {
+      console.error('Erro ao exportar Excel:', error);
       toast.error('Erro ao exportar Excel');
     }
   };
@@ -180,7 +182,7 @@ const Reports: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {(currentReportData as any[]).map((item, index) => (
+                {(currentReportData as Array<{name: string, quantity: number, revenue: number, profit: number}>).map((item, index) => (
                   <tr key={index}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.quantity}</td>
@@ -201,7 +203,7 @@ const Reports: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {(currentReportData as any[]).map((item, index) => (
+                {(currentReportData as Array<{name: string, currentStock: number, status: string, stockValue: number}>).map((item, index) => (
                   <tr key={index}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.currentStock}</td>

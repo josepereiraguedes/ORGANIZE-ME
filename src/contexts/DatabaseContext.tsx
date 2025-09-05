@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import Dexie, { Table } from 'dexie';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
@@ -96,18 +96,18 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [clients, setClients] = useState<Client[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     const productsData = await db.products.toArray();
     const clientsData = await db.clients.toArray();
     const transactionsData = await db.transactions.toArray();
     setProducts(productsData.map(p => ({...p, createdAt: new Date(p.createdAt), updatedAt: new Date(p.updatedAt)})));
     setClients(clientsData.map(c => ({...c, createdAt: new Date(c.createdAt), updatedAt: new Date(c.updatedAt)})));
     setTransactions(transactionsData.map(t => ({...t, createdAt: new Date(t.createdAt)})));
-  };
+  }, [db]);
 
   useEffect(() => {
     refreshData();
-  }, []);
+  }, [refreshData]);
 
   const addProduct = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     const now = new Date();
@@ -116,7 +116,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       createdAt: now,
       updatedAt: now
     };
-    const localId = await db.products.add(newProduct);
+    await db.products.add(newProduct);
     
     // Sync with Supabase - convert camelCase to snake_case
     const supabaseProduct = {

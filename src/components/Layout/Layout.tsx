@@ -7,7 +7,6 @@ import {
   FileText, 
   Settings,
   Menu,
-  X,
   Moon,
   Sun,
   Users

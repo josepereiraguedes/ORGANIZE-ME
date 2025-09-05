@@ -58,6 +58,20 @@ Os arquivos serão gerados no diretório `dist/`.
    VITE_SUPABASE_ANON_KEY="sua_chave_anonima"
    ```
 
+## Solução de Problemas
+
+### Erro "Falha ao sincronizar produto com a nuvem"
+
+Este erro geralmente ocorre devido a inconsistências entre os nomes dos campos no código e no banco de dados. Verifique:
+
+1. Se as tabelas foram criadas corretamente no Supabase
+2. Se as credenciais no arquivo [.env](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\Atelie\.env) estão corretas
+3. Se o script [supabase-schema.sql](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\Atelie\supabase-schema.sql) foi executado completamente
+
+### Problemas com imagens
+
+Se estiver tendo problemas com ícones, verifique se os arquivos [icon-192.png](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\Atelie\public\icon-192.png) e [icon-512.png](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\Atelie\public\icon-512.png) existem no diretório [public/](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\Atelie\public\).
+
 ## Implantação no Netlify
 
 1. Faça login no Netlify

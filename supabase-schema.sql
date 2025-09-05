@@ -49,22 +49,23 @@ CREATE INDEX IF NOT EXISTS idx_transactions_product_id ON public.transactions(pr
 CREATE INDEX IF NOT EXISTS idx_transactions_client_id ON public.transactions(client_id);
 
 -- Permissões para acesso anônimo (ajuste conforme necessário)
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+-- Removendo RLS temporariamente para facilitar testes
+ALTER TABLE public.products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clients DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions DISABLE ROW LEVEL SECURITY;
 
 -- Políticas de segurança (ajuste conforme necessário)
-CREATE POLICY "Enable read access for all users" ON public.products FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users" ON public.products FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update access for all users" ON public.products FOR UPDATE USING (true);
-CREATE POLICY "Enable delete access for all users" ON public.products FOR DELETE USING (true);
+-- CREATE POLICY "Enable read access for all users" ON public.products FOR SELECT USING (true);
+-- CREATE POLICY "Enable insert access for all users" ON public.products FOR INSERT WITH CHECK (true);
+-- CREATE POLICY "Enable update access for all users" ON public.products FOR UPDATE USING (true);
+-- CREATE POLICY "Enable delete access for all users" ON public.products FOR DELETE USING (true);
 
-CREATE POLICY "Enable read access for all users" ON public.clients FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users" ON public.clients FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update access for all users" ON public.clients FOR UPDATE USING (true);
-CREATE POLICY "Enable delete access for all users" ON public.clients FOR DELETE USING (true);
+-- CREATE POLICY "Enable read access for all users" ON public.clients FOR SELECT USING (true);
+-- CREATE POLICY "Enable insert access for all users" ON public.clients FOR INSERT WITH CHECK (true);
+-- CREATE POLICY "Enable update access for all users" ON public.clients FOR UPDATE USING (true);
+-- CREATE POLICY "Enable delete access for all users" ON public.clients FOR DELETE USING (true);
 
-CREATE POLICY "Enable read access for all users" ON public.transactions FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users" ON public.transactions FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update access for all users" ON public.transactions FOR UPDATE USING (true);
-CREATE POLICY "Enable delete access for all users" ON public.transactions FOR DELETE USING (true);
+-- CREATE POLICY "Enable read access for all users" ON public.transactions FOR SELECT USING (true);
+-- CREATE POLICY "Enable insert access for all users" ON public.transactions FOR INSERT WITH CHECK (true);
+-- CREATE POLICY "Enable update access for all users" ON public.transactions FOR UPDATE USING (true);
+-- CREATE POLICY "Enable delete access for all users" ON public.transactions FOR DELETE USING (true);

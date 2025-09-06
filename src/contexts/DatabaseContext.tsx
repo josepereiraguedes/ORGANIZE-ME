@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import Dexie, { Table } from 'dexie';
-import { supabase } from '../services/supabase';
-import toast from 'react-hot-toast';
 
 export interface Product {
   id?: number;
@@ -117,27 +115,6 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updatedAt: now
     };
     await db.products.add(newProduct);
-    
-    // Sync with Supabase - convert camelCase to snake_case
-    const supabaseProduct = {
-      name: newProduct.name,
-      category: newProduct.category,
-      cost: newProduct.cost,
-      sale_price: newProduct.salePrice,
-      quantity: newProduct.quantity,
-      supplier: newProduct.supplier,
-      min_stock: newProduct.minStock,
-      image: newProduct.image,
-      created_at: newProduct.createdAt,
-      updated_at: newProduct.updatedAt
-    };
-    
-    const { error } = await supabase.from('products').insert(supabaseProduct);
-    if (error) {
-      toast.error('Falha ao sincronizar produto com a nuvem.');
-      console.error('Supabase error:', error);
-    }
-    
     await refreshData();
   };
 
@@ -147,37 +124,11 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updatedAt: new Date()
     };
     await db.products.update(id, updatedData);
-
-    // Sync with Supabase - convert camelCase to snake_case
-    const supabaseProduct = {
-      name: updatedData.name,
-      category: updatedData.category,
-      cost: updatedData.cost,
-      sale_price: updatedData.salePrice,
-      quantity: updatedData.quantity,
-      supplier: updatedData.supplier,
-      min_stock: updatedData.minStock,
-      image: updatedData.image,
-      updated_at: updatedData.updatedAt
-    };
-
-    const { error } = await supabase.from('products').update(supabaseProduct).eq('id', id);
-    if (error) {
-      toast.error('Falha ao sincronizar produto com a nuvem.');
-      console.error('Supabase error:', error);
-    }
-
     await refreshData();
   };
 
   const deleteProduct = async (id: number) => {
     await db.products.delete(id);
-    // Sync with Supabase
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) {
-      toast.error('Falha ao sincronizar exclusão do produto com a nuvem.');
-      console.error('Supabase error:', error);
-    }
     await refreshData();
   };
 
@@ -189,22 +140,6 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updatedAt: now
     };
     await db.clients.add(newClient);
-    
-    // Sync with Supabase - convert camelCase to snake_case
-    const supabaseClient = {
-      name: newClient.name,
-      email: newClient.email,
-      phone: newClient.phone,
-      address: newClient.address,
-      created_at: newClient.createdAt,
-      updated_at: newClient.updatedAt
-    };
-    
-    const { error } = await supabase.from('clients').insert(supabaseClient);
-    if (error) {
-      toast.error('Falha ao sincronizar cliente com a nuvem.');
-      console.error('Supabase error:', error);
-    }
     await refreshData();
   };
 
@@ -214,32 +149,11 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updatedAt: new Date()
     };
     await db.clients.update(id, updatedData);
-    
-    // Sync with Supabase - convert camelCase to snake_case
-    const supabaseClient = {
-      name: updatedData.name,
-      email: updatedData.email,
-      phone: updatedData.phone,
-      address: updatedData.address,
-      updated_at: updatedData.updatedAt
-    };
-    
-    const { error } = await supabase.from('clients').update(supabaseClient).eq('id', id);
-    if (error) {
-      toast.error('Falha ao sincronizar cliente com a nuvem.');
-      console.error('Supabase error:', error);
-    }
     await refreshData();
   };
 
   const deleteClient = async (id: number) => {
     await db.clients.delete(id);
-    // Sync with Supabase
-    const { error } = await supabase.from('clients').delete().eq('id', id);
-    if (error) {
-      toast.error('Falha ao sincronizar exclusão do cliente com a nuvem.');
-      console.error('Supabase error:', error);
-    }
     await refreshData();
   };
 
@@ -249,25 +163,6 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       createdAt: new Date()
     };
     await db.transactions.add(newTransaction);
-    
-    // Sync with Supabase - convert camelCase to snake_case
-    const supabaseTransaction = {
-      type: newTransaction.type,
-      product_id: newTransaction.productId,
-      client_id: newTransaction.clientId,
-      quantity: newTransaction.quantity,
-      unit_price: newTransaction.unitPrice,
-      total: newTransaction.total,
-      payment_status: newTransaction.paymentStatus,
-      description: newTransaction.description,
-      created_at: newTransaction.createdAt
-    };
-    
-    const { error } = await supabase.from('transactions').insert(supabaseTransaction);
-    if (error) {
-      toast.error('Falha ao sincronizar transação com a nuvem.');
-      console.error('Supabase error:', error);
-    }
 
     // Update product stock
     const product = await db.products.get(transactionData.productId);
@@ -289,12 +184,6 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateTransactionStatus = async (id: number, status: 'paid' | 'pending') => {
     await db.transactions.update(id, { paymentStatus: status });
-    // Sync with Supabase
-    const { error } = await supabase.from('transactions').update({ payment_status: status }).eq('id', id);
-    if (error) {
-      toast.error('Falha ao sincronizar status da transação com a nuvem.');
-      console.error('Supabase error:', error);
-    }
     await refreshData();
   };
 

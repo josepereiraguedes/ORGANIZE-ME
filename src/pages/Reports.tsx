@@ -68,12 +68,30 @@ const Reports: React.FC = () => {
       return {
         title: { text: 'Top 10 Produtos Mais Vendidos', textStyle },
         tooltip: { trigger: 'axis' },
-        xAxis: { type: 'category', data: salesData.map(item => item.name), axisLabel: { rotate: 45, ...axisStyle.axisLabel }, ...axisStyle },
+        xAxis: { 
+          type: 'category', 
+          data: salesData.map(item => item.name),
+          ...axisStyle,
+          axisLabel: { 
+            ...axisStyle.axisLabel,
+            rotate: 45
+          }
+        },
         yAxis: { type: 'value', ...axisStyle },
-        series: [{ name: 'Receita (R$)', data: salesData.map(item => item.revenue.toFixed(2)), type: 'bar', itemStyle: { color: '#3b82f6' } }]
+        series: [{ 
+          name: 'Receita (R$)', 
+          data: salesData.map(item => {
+            if ('revenue' in item) {
+              return item.revenue.toFixed(2)
+            }
+            return 0
+          }), 
+          type: 'bar', 
+          itemStyle: { color: '#3b82f6' } 
+        }]
       };
     } else {
-      const lowStock = currentReportData.filter(item => item.status === 'Baixo').length;
+      const lowStock = (currentReportData as Array<{status?: string}>).filter(item => item.status === 'Baixo').length;
       const normalStock = currentReportData.length - lowStock;
       return {
         title: { text: 'Status do Estoque', textStyle },
@@ -161,14 +179,20 @@ const Reports: React.FC = () => {
         </div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ delay: 0.2 }}
+        style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)', padding: '1.5rem' }}
+        className={`dark:bg-gray-800`}
+      >
         <ReactECharts 
           option={getChartData()} 
           style={{ height: '400px' }} 
           theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
           opts={{
             renderer: 'canvas',
-            useDirtyRect: false,
+            // Removed useDirtyRect as it's not a valid option in echarts Opts type
             devicePixelRatio: window.devicePixelRatio,
             useCoarsePointer: true,
             useGPUAxis: true,
@@ -179,7 +203,18 @@ const Reports: React.FC = () => {
         />
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ delay: 0.3 }}
+        style={{ 
+          backgroundColor: 'white',
+          borderRadius: '0.5rem',
+          boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+          padding: '1.5rem'
+        }}
+        className={`dark:bg-gray-800`}
+      >
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
           {selectedReport === 'sales' ? <TrendingUp className="w-5 h-5 mr-2" /> : <Package className="w-5 h-5 mr-2" />}
           {selectedReport === 'sales' ? 'Dados de Vendas' : 'Dados do Estoque'}

@@ -74,16 +74,47 @@ Se estiver tendo problemas com ícones, verifique se os arquivos [icon-192.png](
 
 ## Implantação no Netlify
 
-1. Faça login no Netlify
-2. Crie um novo site a partir do repositório Git
-3. Configure as seguintes opções:
+### Método 1: Deploy Automático (Recomendado)
+
+1. **Preparação do código**:
+   ```bash
+   # Execute o script de preparação para deploy
+   powershell -ExecutionPolicy Bypass -File .\deploy-netlify.ps1
+   ```
+
+2. **Faça login no Netlify** (https://netlify.com)
+
+3. **Crie um novo site** a partir do repositório Git
+
+4. **Configure as opções de build**:
    - Build command: `yarn build`
    - Publish directory: `dist`
-4. Adicione as variáveis de ambiente:
+
+5. **Adicione as variáveis de ambiente** no painel do Netlify:
    - `VITE_SUPABASE_URL` (sua URL do Supabase)
    - `VITE_SUPABASE_ANON_KEY` (sua chave anônima do Supabase)
 
-O site será automaticamente implantado após o push para o repositório.
+6. **O site será automaticamente implantado** após cada push para o repositório
+
+### Método 2: Deploy Manual
+
+1. **Gere os arquivos de produção**:
+   ```bash
+   yarn build
+   ```
+
+2. **Faça login no Netlify**
+
+3. **Arraste a pasta `dist`** para a área de deploy do Netlify
+
+4. **Configure as variáveis de ambiente** no painel do Netlify
+
+### Scripts de Apoio
+
+- `deploy-netlify.ps1` - Script PowerShell com instruções completas para deploy
+- `.env.example` - Template com as variáveis de ambiente necessárias
+
+⚠️ **Importante**: As variáveis de ambiente devem ser configuradas no Netlify para o correto funcionamento da aplicação.
 
 ## Implantação no GitHub
 

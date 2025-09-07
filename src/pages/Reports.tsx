@@ -162,7 +162,21 @@ const Reports: React.FC = () => {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <ReactECharts option={getChartData()} style={{ height: '400px' }} theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'} />
+        <ReactECharts 
+          option={getChartData()} 
+          style={{ height: '400px' }} 
+          theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+          opts={{
+            renderer: 'canvas',
+            useDirtyRect: false,
+            devicePixelRatio: window.devicePixelRatio,
+            useCoarsePointer: true,
+            useGPUAxis: true,
+            pointerSize: 4,
+            supportDirtyRect: false,
+            eventMode: 'passive'
+          }}
+        />
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">

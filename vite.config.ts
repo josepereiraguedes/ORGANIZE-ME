@@ -31,7 +31,8 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico}'],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\./,
@@ -43,8 +44,32 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 // 24 hours
               }
             }
+          },
+          {
+            urlPattern: /\.(jpg|jpeg|svg|ico)$/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'images-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 dias
+              }
+            }
+          },
+          {
+            urlPattern: /\/icon-(192|512)\.png$/,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'manifest-icons',
+              expiration: {
+                maxEntries: 2,
+                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+              }
+            }
           }
-        ]
+        ],
+        navigateFallback: null,
+        navigateFallbackAllowlist: [/^\/$/]
       }
     })
   ],
@@ -54,9 +79,28 @@ export default defineConfig({
   build: {
     rollupOptions: {
       external: ['stream', 'http', 'url', 'https', 'zlib'],
+      output: {
+        manualChunks: undefined,
+        compact: false,
+        minifyInternalExports: false
+      }
     },
     commonjsOptions: {
       transformMixedEsModules: true
+    },
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        defaults: false,
+        drop_console: false,
+        keep_fnames: true,
+        keep_classnames: true
+      },
+      mangle: false,
+      format: {
+        comments: true,
+        beautify: true
+      }
     }
   }
 });

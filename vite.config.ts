@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Configuração para servir arquivos estáticos da pasta public
+// Configuração para servir arquivos estáticos da pasta public e fixar a porta
 export default defineConfig({
   plugins: [react()],
   build: {

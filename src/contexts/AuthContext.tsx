@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email, 
         password,
         options: {
-          emailRedirectTo: `http://localhost:5174/confirm.html`
+          emailRedirectTo: `http://localhost:5173/confirm.html`
         }
       });
       

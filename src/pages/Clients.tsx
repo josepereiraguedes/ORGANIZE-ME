@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Users, Mail, Phone, MapPin } from 'lucide-react';
-import { useDatabase } from '../contexts/DatabaseContext';
+import { useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
+import { handleError } from '../utils/errorHandler';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const Clients: React.FC = () => {
-  const { clients, deleteClient } = useDatabase();
+  const { clients, deleteClient } = useSupabaseDatabase();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredClients = useMemo(() => {
+    return clients.filter(client =>
+      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [clients, searchTerm]);
 
   const handleDeleteClient = async (id: number, name: string) => {
     if (window.confirm(`Tem certeza que deseja excluir o cliente "${name}"?`)) {
@@ -20,8 +23,8 @@ const Clients: React.FC = () => {
         await deleteClient(id);
         toast.success('Cliente excluído com sucesso!');
       } catch (error) {
-        console.error('Erro ao excluir cliente:', error);
-        toast.error('Erro ao excluir cliente');
+        handleError(error, 'clientsPage');
+        toast.error('Erro ao excluir cliente. Tente novamente.');
       }
     }
   };

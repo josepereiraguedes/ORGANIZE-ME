@@ -2,24 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Save, X } from 'lucide-react';
-import { useDatabase } from '../../contexts/DatabaseContext';
+import { useSupabaseDatabase } from '../../contexts/SupabaseDatabaseContext';
+import { handleError } from '../../utils/errorHandler';
 import toast from 'react-hot-toast';
 
 interface ProductFormData {
   name: string;
   category: string;
   cost: number;
-  salePrice: number;
+  sale_price: number;
   quantity: number;
   supplier: string;
-  minStock: number;
+  min_stock: number;
   image?: string;
 }
 
 const ProductForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { products, addProduct, updateProduct } = useDatabase();
+  const { products, addProduct, updateProduct } = useSupabaseDatabase();
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
   
@@ -33,10 +34,10 @@ const ProductForm: React.FC = () => {
       setValue('name', product.name);
       setValue('category', product.category);
       setValue('cost', product.cost);
-      setValue('salePrice', product.salePrice);
+      setValue('sale_price', product.sale_price);
       setValue('quantity', product.quantity);
       setValue('supplier', product.supplier);
-      setValue('minStock', product.minStock);
+      setValue('min_stock', product.min_stock);
       setValue('image', product.image);
       if (product.image) {
         setImagePreview(product.image);
@@ -83,8 +84,7 @@ const ProductForm: React.FC = () => {
       }
       navigate('/inventory');
     } catch (error) {
-      console.error('Erro ao salvar produto:', error);
-      toast.error('Erro ao salvar produto');
+      handleError(error, 'productForm');
     } finally {
       setIsLoading(false);
     }
@@ -153,12 +153,12 @@ const ProductForm: React.FC = () => {
                   Preço de Venda (R$) *
                 </label>
                 <input
-                  {...register('salePrice', { required: 'Preço de venda é obrigatório', valueAsNumber: true, min: { value: 0.01, message: 'Preço deve ser maior que zero' } })}
+                  {...register('sale_price', { required: 'Preço de venda é obrigatório', valueAsNumber: true, min: { value: 0.01, message: 'Preço deve ser maior que zero' } })}
                   type="number" step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="0.00"
                 />
-                {errors.salePrice && <p className="mt-1 text-sm text-red-600">{errors.salePrice.message}</p>}
+                {errors.sale_price && <p className="mt-1 text-sm text-red-600">{errors.sale_price.message}</p>}
               </div>
 
               <div>
@@ -192,12 +192,12 @@ const ProductForm: React.FC = () => {
                   Estoque Mínimo *
                 </label>
                 <input
-                  {...register('minStock', { required: 'Estoque mínimo é obrigatório', valueAsNumber: true, min: { value: 0, message: 'Estoque mínimo não pode ser negativo' } })}
+                  {...register('min_stock', { required: 'Estoque mínimo é obrigatório', valueAsNumber: true, min: { value: 0, message: 'Estoque mínimo não pode ser negativo' } })}
                   type="number"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="0"
                 />
-                {errors.minStock && <p className="mt-1 text-sm text-red-600">{errors.minStock.message}</p>}
+                {errors.min_stock && <p className="mt-1 text-sm text-red-600">{errors.min_stock.message}</p>}
               </div>
             </div>
 

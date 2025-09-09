@@ -1,23 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Package, AlertTriangle } from 'lucide-react';
-import { useDatabase } from '../contexts/DatabaseContext';
+import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
+import { useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
+import { handleError } from '../utils/errorHandler';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const Inventory: React.FC = () => {
-  const { products, deleteProduct } = useDatabase();
+  const { products, deleteProduct } = useSupabaseDatabase();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  const categories = [...new Set(products.map(p => p.category))];
+  const categories = useMemo(() => {
+    return [...new Set(products.map(p => p.category))];
+  }, [products]);
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.supplier.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           product.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !selectedCategory || product.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, selectedCategory]);
 
   const handleDeleteProduct = async (id: number, name: string) => {
     if (window.confirm(`Tem certeza que deseja excluir o produto "${name}"?`)) {
@@ -25,8 +30,8 @@ const Inventory: React.FC = () => {
         await deleteProduct(id);
         toast.success('Produto excluído com sucesso!');
       } catch (error) {
-        console.error('Erro ao excluir produto:', error);
-        toast.error('Erro ao excluir produto');
+        handleError(error, 'inventoryPage');
+        toast.error('Erro ao excluir produto. Tente novamente.');
       }
     }
   };
@@ -88,11 +93,12 @@ const Inventory: React.FC = () => {
                   <Package className="w-12 h-12 text-gray-400" />
                 </div>
               )}
-              {Number(product.quantity) <= Number(product.minStock) && (
-                <div className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full">
-                  <AlertTriangle className="w-4 h-4" />
+              {Number(product.quantity) <= Number(product.min_stock) && (
+                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  !
                 </div>
               )}
+
             </div>
             
             <div className="p-4 flex-grow flex flex-col">
@@ -104,28 +110,37 @@ const Inventory: React.FC = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Estoque:</span>
-                    <span className={`font-medium ${Number(product.quantity) <= Number(product.minStock) ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+                    <span className={`font-medium ${Number(product.quantity) <= Number(product.min_stock) ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
                       {product.quantity}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Preço:</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      R$ {(Number(product.salePrice) || 0).toFixed(2)}
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      R$ {(Number(product.sale_price) || 0).toFixed(2)}
                     </span>
+
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-between items-center pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-lg font-semibold text-green-600">
-                  R$ {((Number(product.quantity) || 0) * (Number(product.salePrice) || 0)).toFixed(2)}
-                </span>
+                <div className="text-right">
+                  <p className={`text-sm font-medium ${Number(product.quantity) <= Number(product.min_stock) ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+                    {product.quantity} {product.quantity <= 1 ? 'unidade' : 'unidades'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    R$ {((Number(product.quantity) || 0) * (Number(product.sale_price) || 0)).toFixed(2)}
+                  </p>
+                </div>
                 <div className="flex space-x-2">
                   <Link to={`/inventory/edit/${product.id}`} className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors">
                     <Edit className="w-4 h-4" />
                   </Link>
-                  <button onClick={() => handleDeleteProduct(product.id!, product.name)} className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors">
+                  <button 
+                    onClick={() => handleDeleteProduct(product.id!, product.name)} 
+                    className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Save } from 'lucide-react';
-import { useDatabase } from '../../contexts/DatabaseContext';
+import { useSupabaseDatabase } from '../../contexts/SupabaseDatabaseContext';
+import { handleError } from '../../utils/errorHandler';
 import toast from 'react-hot-toast';
 
 interface ClientFormData {
@@ -15,7 +16,7 @@ interface ClientFormData {
 const ClientForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { clients, addClient, updateClient } = useDatabase();
+  const { clients, addClient, updateClient } = useSupabaseDatabase();
   const [isLoading, setIsLoading] = useState(false);
   
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<ClientFormData>();
@@ -44,8 +45,7 @@ const ClientForm: React.FC = () => {
       }
       navigate('/clients');
     } catch (error) {
-      console.error('Erro ao salvar cliente:', error);
-      toast.error('Erro ao salvar cliente');
+      handleError(error, 'clientForm');
     } finally {
       setIsLoading(false);
     }

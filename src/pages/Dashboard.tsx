@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Package, DollarSign, TrendingUp, Clock } from 'lucide-react';
-import { useDatabase, FinancialSummary } from '../contexts/DatabaseContext';
+import { FinancialSummary, useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
+import { handleError } from '../utils/errorHandler';
 import { motion } from 'framer-motion';
-import ReactECharts from 'echarts-for-react';
 
 const Dashboard: React.FC = () => {
-  const { products, transactions, clients, getFinancialSummary } = useDatabase();
+  const { products, transactions, clients, getFinancialSummary } = useSupabaseDatabase();
   const [financialData, setFinancialData] = useState<FinancialSummary>({
     totalRevenue: 0,
     totalCosts: 0,
@@ -16,17 +16,29 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const loadFinancialData = async () => {
-      const data = await getFinancialSummary();
-      setFinancialData(data);
+      try {
+        const data = await getFinancialSummary();
+        setFinancialData(data);
+      } catch (error) {
+        handleError(error, 'dashboard');
+      }
     };
     loadFinancialData();
   }, [transactions, getFinancialSummary]);
 
-  const lowStockProducts = products.filter(p => Number(p.quantity) <= Number(p.minStock));
-  const totalProducts = products.length;
-  const totalValue = products.reduce((sum, p) => sum + ((Number(p.quantity) || 0) * (Number(p.salePrice) || 0)), 0);
+  const lowStockProducts = useMemo(() => {
+    return products.filter(p => Number(p.quantity) <= Number(p.min_stock));
+  }, [products]);
 
-  const statsCards = [
+  const totalProducts = useMemo(() => {
+    return products.length;
+  }, [products]);
+
+  const totalValue = useMemo(() => {
+    return products.reduce((sum, p) => sum + ((Number(p.quantity) || 0) * (Number(p.sale_price) || 0)), 0);
+  }, [products]);
+
+  const statsCards = useMemo(() => [
     {
       title: 'Faturamento (Pago)',
       value: `R$ ${financialData.totalRevenue.toFixed(2)}`,
@@ -51,74 +63,36 @@ const Dashboard: React.FC = () => {
       icon: Package,
       color: 'blue',
     },
-  ];
+  ], [financialData, totalValue, totalProducts]);
 
-  const getChartOption = () => {
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (6 - i));
-      return date;
-    });
+  // Função simplificada para calcular vendas dos últimos 7 dias sem depender de echarts
+  const getLast7DaysSales = useMemo(() => {
+    return () => {
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        return date;
+      });
 
-    const salesByDay = last7Days.map(day => {
-      const dayStart = new Date(day);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(day);
-      dayEnd.setHours(23, 59, 59, 999);
+      return last7Days.map(day => {
+        const dayStart = new Date(day);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(day);
+        dayEnd.setHours(23, 59, 59, 999);
 
-      return transactions
-        .filter(t => t.type === 'sale' && t.createdAt >= dayStart && t.createdAt <= dayEnd)
-        .reduce((sum, t) => sum + t.total, 0);
-    });
+        const daySales = transactions
+          .filter(t => t.type === 'sale' && new Date(t.created_at) >= dayStart && new Date(t.created_at) <= dayEnd)
+          .reduce((sum, t) => sum + t.total, 0);
 
-    return {
-      title: {
-        text: 'Vendas dos Últimos 7 Dias',
-        textStyle: {
-          color: document.documentElement.classList.contains('dark') ? '#fff' : '#333'
-        }
-      },
-      tooltip: {
-        trigger: 'axis'
-      },
-      xAxis: {
-        type: 'category',
-        data: last7Days.map(d => d.toLocaleDateString('pt-BR', { weekday: 'short' })),
-        axisLine: {
-          lineStyle: {
-            color: document.documentElement.classList.contains('dark') ? '#4b5563' : '#d1d5db'
-          }
-        },
-        axisLabel: {
-          color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280'
-        }
-      },
-      yAxis: {
-        type: 'value',
-        axisLine: {
-          lineStyle: {
-            color: document.documentElement.classList.contains('dark') ? '#4b5563' : '#d1d5db'
-          }
-        },
-        axisLabel: {
-          color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280'
-        }
-      },
-      series: [{
-        data: salesByDay.map(s => s.toFixed(2)),
-        type: 'line',
-        smooth: true,
-        lineStyle: { color: '#3b82f6' },
-        itemStyle: { color: '#3b82f6' },
-        areaStyle: {
-          color: {
-            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [{ offset: 0, color: 'rgba(59, 130, 246, 0.3)' }, { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }]
-          }
-        }
-      }]
+        return {
+          date: day.toLocaleDateString('pt-BR', { weekday: 'short' }),
+          sales: daySales
+        };
+      });
     };
-  };
+  }, [transactions]);
+
+  const last7DaysSales = useMemo(() => getLast7DaysSales(), [getLast7DaysSales]);
 
   return (
     <div className="space-y-6">
@@ -159,21 +133,27 @@ const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <ReactECharts 
-            option={getChartOption()} 
-            style={{ height: '300px' }} 
-            theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
-            opts={{ 
-              renderer: 'canvas',
-              useDirtyRect: false,
-              devicePixelRatio: window.devicePixelRatio,
-              useCoarsePointer: true,
-              useGPUAxis: true,
-              pointerSize: 4,
-              supportDirtyRect: false,
-              eventMode: 'passive'
-            }}
-          />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Vendas dos Últimos 7 Dias
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dia</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {last7DaysSales.map((day, index) => (
+                  <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{day.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">R$ {day.sales.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
@@ -201,7 +181,7 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-red-600">{product.quantity} restante(s)</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Mín: {product.minStock}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Mín: {product.min_stock}</p>
                   </div>
                 </div>
               ))
@@ -228,8 +208,8 @@ const Dashboard: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {transactions.slice(-5).reverse().map((transaction) => {
-                const product = products.find(p => p.id === transaction.productId);
-                const client = clients.find(c => c.id === transaction.clientId);
+                const product = products.find(p => p.id === transaction.product_id);
+                const client = clients.find(c => c.id === transaction.client_id);
                 return (
                   <tr key={transaction.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -256,10 +236,10 @@ const Dashboard: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {transaction.type === 'sale' && (
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          transaction.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          transaction.payment_status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                         }`}>
-                          {transaction.paymentStatus === 'paid' ? 'Pago' : 'A Pagar'}
+                          {transaction.payment_status === 'paid' ? 'Pago' : 'A Pagar'}
                         </span>
                       )}
                     </td>
@@ -270,7 +250,7 @@ const Dashboard: React.FC = () => {
                       R$ {transaction.total.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {transaction.createdAt.toLocaleDateString('pt-BR')}
+                      {new Date(transaction.created_at).toLocaleDateString('pt-BR')}
                     </td>
                   </tr>
                 );

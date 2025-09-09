@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useConfig } from '../../contexts/ConfigContext';
+import UserProfile from '../Auth/UserProfile';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -98,6 +99,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </button>
 
             <div className="flex items-center space-x-4 ml-auto">
+              <UserProfile />
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"

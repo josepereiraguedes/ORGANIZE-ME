@@ -1,45 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Save } from 'lucide-react';
-import { useDatabase } from '../../contexts/DatabaseContext';
+import { useSupabaseDatabase } from '../../contexts/SupabaseDatabaseContext';
+import { handleError } from '../../utils/errorHandler';
 import toast from 'react-hot-toast';
 
 interface TransactionFormData {
   type: 'sale' | 'purchase' | 'adjustment';
-  productId: number;
-  clientId?: number;
+  product_id: number;
+  client_id?: number;
   quantity: number;
-  unitPrice: number;
-  paymentStatus: 'paid' | 'pending';
+  unit_price: number;
+  payment_status: 'paid' | 'pending';
   description?: string;
 }
 
 const TransactionForm: React.FC = () => {
   const navigate = useNavigate();
-  const { products, clients, addTransaction } = useDatabase();
+  const { products, clients, addTransaction } = useSupabaseDatabase();
   const [isLoading, setIsLoading] = useState(false);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TransactionFormData>({
     defaultValues: {
-      paymentStatus: 'paid'
+      payment_status: 'paid',
+      quantity: 1,
+      unit_price: 0
     }
   });
 
   const watchedType = watch('type');
-  const watchedProductId = watch('productId');
-  const watchedQuantity = watch('quantity') || 0;
-  const watchedUnitPrice = watch('unitPrice') || 0;
+  const watchedProductId = watch('product_id');
+  const watchedQuantity = watch('quantity') || 1;
+  const watchedUnitPrice = watch('unit_price') || 0;
 
   const selectedProduct = products.find(p => p.id === Number(watchedProductId));
   const total = watchedQuantity * watchedUnitPrice;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedProduct && watchedType) {
       if (watchedType === 'sale') {
-        setValue('unitPrice', Number(selectedProduct.salePrice) || 0);
+        setValue('unit_price', Number(selectedProduct.sale_price) || 0);
       } else if (watchedType === 'purchase') {
-        setValue('unitPrice', Number(selectedProduct.cost) || 0);
+        setValue('unit_price', Number(selectedProduct.cost) || 0);
       }
     }
   }, [selectedProduct, watchedType, setValue]);
@@ -49,16 +52,18 @@ const TransactionForm: React.FC = () => {
     try {
       const transactionData = {
         ...data,
-        clientId: isNaN(data.clientId!) ? undefined : Number(data.clientId),
-        total: data.quantity * data.unitPrice,
-        paymentStatus: data.type === 'sale' ? data.paymentStatus : 'paid',
+        product_id: Number(data.product_id),
+        client_id: data.client_id ? Number(data.client_id) : undefined,
+        quantity: Number(data.quantity),
+        unit_price: Number(data.unit_price),
+        total: Number(data.quantity) * Number(data.unit_price),
+        payment_status: data.type === 'sale' ? data.payment_status : 'paid',
       };
       await addTransaction(transactionData);
       toast.success('Transação registrada com sucesso!');
       navigate('/sales');
     } catch (error) {
-      console.error('Erro ao registrar transação:', error);
-      toast.error('Erro ao registrar transação');
+      handleError(error, 'transactionForm');
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +107,7 @@ const TransactionForm: React.FC = () => {
                 Produto *
               </label>
               <select
-                {...register('productId', { required: 'Produto é obrigatório', valueAsNumber: true })}
+                {...register('product_id', { required: 'Produto é obrigatório', valueAsNumber: true })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">Selecione o produto</option>
@@ -112,7 +117,7 @@ const TransactionForm: React.FC = () => {
                   </option>
                 ))}
               </select>
-              {errors.productId && <p className="mt-1 text-sm text-red-600">{errors.productId.message}</p>}
+              {errors.product_id && <p className="mt-1 text-sm text-red-600">{errors.product_id.message}</p>}
             </div>
 
             {watchedType === 'sale' && (
@@ -122,7 +127,7 @@ const TransactionForm: React.FC = () => {
                     Cliente (Opcional)
                   </label>
                   <select
-                    {...register('clientId', { valueAsNumber: true })}
+                    {...register('client_id', { valueAsNumber: true })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option value="">Selecione o cliente</option>
@@ -138,7 +143,7 @@ const TransactionForm: React.FC = () => {
                     Status do Pagamento *
                   </label>
                   <select
-                    {...register('paymentStatus', { required: 'Status é obrigatório' })}
+                    {...register('payment_status', { required: watchedType === 'sale' ? 'Status é obrigatório' : false })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option value="paid">Pago</option>
@@ -153,7 +158,11 @@ const TransactionForm: React.FC = () => {
                 Quantidade *
               </label>
               <input
-                {...register('quantity', { required: 'Quantidade é obrigatória', valueAsNumber: true, min: { value: 1, message: 'Quantidade deve ser maior que zero' } })}
+                {...register('quantity', { 
+                  required: 'Quantidade é obrigatória', 
+                  valueAsNumber: true, 
+                  min: { value: 1, message: 'Quantidade deve ser maior que zero' } 
+                })}
                 type="number"
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="0"
@@ -171,12 +180,16 @@ const TransactionForm: React.FC = () => {
                 Valor Unitário (R$) *
               </label>
               <input
-                {...register('unitPrice', { required: 'Valor unitário é obrigatório', valueAsNumber: true, min: { value: 0.01, message: 'Valor deve ser maior que zero' } })}
+                {...register('unit_price', { 
+                  required: 'Valor unitário é obrigatório', 
+                  valueAsNumber: true, 
+                  min: { value: 0.01, message: 'Valor deve ser maior que zero' } 
+                })}
                 type="number" step="0.01"
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="0.00"
               />
-              {errors.unitPrice && <p className="mt-1 text-sm text-red-600">{errors.unitPrice.message}</p>}
+              {errors.unit_price && <p className="mt-1 text-sm text-red-600">{errors.unit_price.message}</p>}
             </div>
 
             <div className="md:col-span-2">

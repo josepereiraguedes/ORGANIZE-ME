@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import { useDatabase } from '../contexts/DatabaseContext';
+import { useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
 const Sales: React.FC = () => {
-  const { transactions, products, clients, updateTransactionStatus } = useDatabase();
+  const { transactions, products, clients, updateTransactionStatus } = useSupabaseDatabase();
   const [selectedPeriod, setSelectedPeriod] = useState('all');
 
   const handleStatusChange = async (id: number, currentStatus: 'paid' | 'pending') => {
@@ -22,41 +22,63 @@ const Sales: React.FC = () => {
     });
   };
 
-  const getFilteredTransactions = () => {
+  const getStartOfPeriod = useMemo(() => {
     const now = new Date();
-    if (selectedPeriod === 'all') return transactions;
-
-    const startOfPeriod = new Date();
     switch (selectedPeriod) {
       case 'today':
-        startOfPeriod.setHours(0, 0, 0, 0);
-        break;
-      case 'week':
-        startOfPeriod.setDate(now.getDate() - 7);
-        break;
+        return new Date(now.setHours(0, 0, 0, 0));
+      case 'week': {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        return new Date(weekStart.setHours(0, 0, 0, 0));
+      }
       case 'month':
-        startOfPeriod.setMonth(now.getMonth() - 1);
-        break;
+        return new Date(now.getFullYear(), now.getMonth(), 1);
       default:
-        return transactions;
+        return new Date(0);
     }
-    return transactions.filter(t => t.createdAt >= startOfPeriod);
-  };
+  }, [selectedPeriod]);
 
-  const filteredTransactions = getFilteredTransactions();
-  
-  const paidSales = filteredTransactions.filter(t => t.type === 'sale' && t.paymentStatus === 'paid');
-  const purchases = filteredTransactions.filter(t => t.type === 'purchase');
+  const filteredTransactions = useMemo(() => {
+    if (selectedPeriod === 'all') return transactions;
+    
+    const startOfPeriod = getStartOfPeriod;
+    return transactions.filter(t => new Date(t.created_at) >= startOfPeriod);
+  }, [transactions, selectedPeriod, getStartOfPeriod]);
 
-  const totalRevenue = paidSales.reduce((sum, t) => sum + t.total, 0);
-  const totalCosts = purchases.reduce((sum, t) => sum + t.total, 0);
-  const profit = totalRevenue - totalCosts;
-  const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+  const paidSales = useMemo(() => {
+    return filteredTransactions.filter(t => t.type === 'sale' && t.payment_status === 'paid');
+  }, [filteredTransactions]);
+
+  const pendingSales = useMemo(() => {
+    return filteredTransactions.filter(t => t.type === 'sale' && t.payment_status === 'pending');
+  }, [filteredTransactions]);
+
+  const purchases = useMemo(() => {
+    return filteredTransactions.filter(t => t.type === 'purchase');
+  }, [filteredTransactions]);
+
+  const financialSummary = useMemo(() => {
+    const totalRevenue = paidSales.reduce((sum, t) => sum + (t.total || 0), 0);
+    const pendingReceivables = pendingSales.reduce((sum, t) => sum + (t.total || 0), 0);
+    const totalCosts = purchases.reduce((sum, t) => sum + (t.total || 0), 0);
+    const profit = totalRevenue - totalCosts;
+    const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+
+    return {
+      totalRevenue,
+      pendingReceivables,
+      totalCosts,
+      profit,
+      profitMargin
+    };
+  }, [paidSales, pendingSales, purchases]);
 
   const financialCards = [
-    { title: 'Receita (Paga)', value: `R$ ${totalRevenue.toFixed(2)}`, icon: TrendingUp, color: 'green' },
-    { title: 'Custos Totais', value: `R$ ${totalCosts.toFixed(2)}`, icon: TrendingDown, color: 'red' },
-    { title: 'Lucro Líquido', value: `R$ ${profit.toFixed(2)}`, icon: DollarSign, color: profit >= 0 ? 'green' : 'red', change: `${profitMargin.toFixed(1)}%` }
+    { title: 'Receita (Paga)', value: `R$ ${financialSummary.totalRevenue.toFixed(2)}`, icon: TrendingUp, color: 'green' },
+    { title: 'Receita (Pendente)', value: `R$ ${financialSummary.pendingReceivables.toFixed(2)}`, icon: TrendingUp, color: 'yellow' },
+    { title: 'Custos Totais', value: `R$ ${financialSummary.totalCosts.toFixed(2)}`, icon: TrendingDown, color: 'red' },
+    { title: 'Lucro Líquido', value: `R$ ${financialSummary.profit.toFixed(2)}`, icon: DollarSign, color: financialSummary.profit >= 0 ? 'green' : 'red', change: `${financialSummary.profitMargin.toFixed(1)}%` }
   ];
 
   return (
@@ -116,9 +138,9 @@ const Sales: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredTransactions.slice().reverse().map((transaction) => {
-                const product = products.find(p => p.id === transaction.productId);
-                const client = clients.find(c => c.id === transaction.clientId);
+              {transactions.map((transaction) => {
+                const product = products.find(p => p.id === transaction.product_id);
+                const client = clients.find(c => c.id === transaction.client_id);
                 return (
                   <tr key={transaction.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -135,9 +157,9 @@ const Sales: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {transaction.type === 'sale' && (
                         <button
-                          onClick={() => handleStatusChange(transaction.id!, transaction.paymentStatus)}
-                          className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer transition-opacity hover:opacity-80 ${transaction.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}`}>
-                          {transaction.paymentStatus === 'paid' ? 'Pago' : 'A Pagar'}
+                          onClick={() => handleStatusChange(transaction.id!, transaction.payment_status)}
+                          className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer transition-opacity hover:opacity-80 ${transaction.payment_status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}`}>
+                          {transaction.payment_status === 'paid' ? 'Pago' : 'A Pagar'}
                         </button>
                       )}
                     </td>
@@ -146,11 +168,12 @@ const Sales: React.FC = () => {
                       {transaction.type === 'sale' ? '+' : transaction.type === 'purchase' ? '-' : ''}R$ {transaction.total.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {format(transaction.createdAt, 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      {format(transaction.created_at, 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                     </td>
                   </tr>
                 );
               })}
+
             </tbody>
           </table>
         </div>

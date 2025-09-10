@@ -65,13 +65,17 @@ const Dashboard: React.FC = () => {
     },
   ], [financialData, totalValue, totalProducts]);
 
-  // Função corrigida para calcular vendas dos últimos 7 dias
+  // Função corrigida para calcular vendas dos últimos 7 dias na ordem correta
   const getLast7DaysSales = useMemo(() => {
     return () => {
       const today = new Date();
+      // Criar array com os últimos 7 dias na ordem correta (segunda a domingo)
       const last7Days = Array.from({ length: 7 }, (_, i) => {
         const date = new Date(today);
-        date.setDate(today.getDate() - (6 - i));
+        // Calcular os dias corretos da semana (segunda é 1, domingo é 0)
+        const dayOfWeek = today.getDay();
+        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) + i;
+        date.setDate(diff);
         return date;
       });
 
@@ -90,8 +94,10 @@ const Dashboard: React.FC = () => {
           )
           .reduce((sum, t) => sum + t.total, 0);
 
+        // Formatar o dia da semana corretamente
+        const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
         return {
-          date: day.toLocaleDateString('pt-BR', { weekday: 'short' }),
+          date: weekdays[day.getDay()],
           sales: daySales
         };
       });

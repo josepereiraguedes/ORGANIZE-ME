@@ -65,12 +65,13 @@ const Dashboard: React.FC = () => {
     },
   ], [financialData, totalValue, totalProducts]);
 
-  // Função simplificada para calcular vendas dos últimos 7 dias sem depender de echarts
+  // Função corrigida para calcular vendas dos últimos 7 dias
   const getLast7DaysSales = useMemo(() => {
     return () => {
+      const today = new Date();
       const last7Days = Array.from({ length: 7 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (6 - i));
+        const date = new Date(today);
+        date.setDate(today.getDate() - (6 - i));
         return date;
       });
 
@@ -81,7 +82,12 @@ const Dashboard: React.FC = () => {
         dayEnd.setHours(23, 59, 59, 999);
 
         const daySales = transactions
-          .filter(t => t.type === 'sale' && new Date(t.created_at) >= dayStart && new Date(t.created_at) <= dayEnd)
+          .filter(t => 
+            t.type === 'sale' && 
+            t.payment_status === 'paid' && // Apenas vendas pagas
+            new Date(t.created_at) >= dayStart && 
+            new Date(t.created_at) <= dayEnd
+          )
           .reduce((sum, t) => sum + t.total, 0);
 
         return {
@@ -107,11 +113,8 @@ const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsCards.map((stat, index) => (
-          <motion.div
+          <div
             key={stat.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
             className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
           >
             <div className="flex items-center justify-between">
@@ -127,12 +130,12 @@ const Dashboard: React.FC = () => {
                 <stat.icon className={`w-6 h-6 text-${stat.color}-600 dark:text-${stat.color}-400`} />
               </div>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Vendas dos Últimos 7 Dias
           </h3>
@@ -154,9 +157,9 @@ const Dashboard: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Produtos com Estoque Baixo
           </h3>
@@ -187,10 +190,10 @@ const Dashboard: React.FC = () => {
               ))
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Últimas Movimentações
         </h3>
@@ -258,7 +261,7 @@ const Dashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

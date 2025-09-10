@@ -143,6 +143,33 @@ O sistema agora suporta autenticação de usuários através do Supabase Auth:
 
 Consulte o guia completo em [SUPABASE_SETUP_GUIDE.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/SUPABASE_SETUP_GUIDE.md) para instruções passo a passo.
 
+### Configuração Específica para Autenticação Sem Confirmação de Email
+
+Para que o sistema de autenticação simplificado funcione corretamente (sem confirmação de email), é necessário configurar corretamente o Supabase:
+
+1. Acesse https://app.supabase.com
+2. Selecione seu projeto
+3. Vá para **Authentication > Settings**
+4. **Ative** a opção **"Enable email signups"**
+5. **Desative** a opção **"Enable email confirmations"**
+6. Salve as alterações
+
+Consulte o guia completo em [CONFIG-SUPABASE-COMPLETA.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/CONFIG-SUPABASE-COMPLETA.md) para mais detalhes.
+
+## Persistência de Dados
+
+O sistema utiliza o Supabase para armazenar todos os dados de forma persistente na nuvem. Cada usuário tem seus próprios dados isolados:
+
+- **Isolamento por usuário**: Cada conta tem seus próprios produtos, clientes e transações
+- **Segurança**: RLS (Row Level Security) garante que usuários só vejam seus próprios dados
+- **Persistência**: Os dados permanecem no banco mesmo após sair do sistema
+
+⚠️ **Importante**: Se você sair e entrar com uma conta diferente, não verá os dados da conta anterior. Isso é uma característica de segurança.
+
+Consulte [PERSISTENCIA-DADOS.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/PERSISTENCIA-DADOS.md) para mais detalhes sobre como funciona a persistência de dados.
+
+Se estiver enfrentando problemas com dados que "somem", consulte [SOLUCAO-PROBLEMAS-PERSISTENCIA.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/SOLUCAO-PROBLEMAS-PERSISTENCIA.md) para um guia passo a passo de solução de problemas.
+
 ## Segurança em Produção
 
 Para implantação em ambiente de produção, siga as recomendações no guia de segurança:
@@ -193,9 +220,15 @@ Se estiver tendo problemas com ícones, verifique se os arquivos [icon-192.png](
 Se estiver tendo problemas com login/cadastro:
 
 1. Verifique se as credenciais do Supabase estão corretas no [.env](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/.env)
-2. Confirme se o provedor de autenticação "Email" está habilitado no Supabase
+2. Confirme se o provedor de autenticação "Email" está habilitado no Supabase:
+   - Acesse https://app.supabase.com
+   - Selecione seu projeto
+   - Vá para **Authentication > Settings**
+   - **Ative** a opção **"Enable email signups"**
+   - **Desative** a opção **"Enable email confirmations"**
 3. Verifique se o script [supabase-schema.sql](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/supabase-schema.sql) foi executado
 4. Consulte o [SUPABASE_SETUP_GUIDE.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/SUPABASE_SETUP_GUIDE.md) para mais detalhes
+5. Consulte o [CONFIG-SUPABASE-COMPLETA.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/CONFIG-SUPABASE-COMPLETA.md) para instruções completas de configuração
 
 ### Problemas com o Banco de Dados
 
@@ -204,6 +237,27 @@ Se estiver tendo problemas com o banco de dados:
 1. Execute `npm run test:supabase` para verificar a configuração
 2. Siga as instruções em [MANUAL_DATABASE_SETUP.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/MANUAL_DATABASE_SETUP.md) para configurar as tabelas
 3. Certifique-se de que o script SQL foi executado no painel do Supabase
+
+### Problemas de Login
+
+Se estiver tendo problemas com login/cadastro:
+
+1. Consulte [SOLUCAO-ERRO-LOGIN.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/SOLUCAO-ERRO-LOGIN.md) para um guia completo de solução de problemas
+2. Verifique se as credenciais do Supabase estão corretas no [.env](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/.env)
+3. Confirme se o provedor de autenticação "Email" está habilitado no Supabase:
+   - Acesse https://app.supabase.com
+   - Selecione seu projeto
+   - Vá para **Authentication > Settings**
+   - **Ative** a opção **"Enable email signups"**
+   - **Desative** a opção **"Enable email confirmations"**
+
+### Dados Não Persistem ao Sair e Entrar
+
+Se os dados "somem" quando você sai e entra novamente:
+
+1. **Verifique se está usando a mesma conta**: Cada usuário tem seus próprios dados
+2. **Confirme suas credenciais**: Use o mesmo email e senha
+3. **Consulte [PERSISTENCIA-DADOS.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/PERSISTENCIA-DADOS.md) para mais detalhes**
 
 ## Implantação no Netlify
 

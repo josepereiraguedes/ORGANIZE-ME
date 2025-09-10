@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Autenticação Supabase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full bg-white p-8 rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Teste de Autenticação</h1>
+        
+        <div id="auth-section">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                    Email
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                       id="email" type="email" placeholder="seu@email.com">
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                    Senha
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" 
+                       id="password" type="password" placeholder="********">
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
+                        type="button" id="signup-btn">
+                    Criar Conta
+                </button>
+                <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
+                        type="button" id="login-btn">
+                    Fazer Login
+                </button>
+            </div>
+        </div>
+        
+        <div id="user-section" class="hidden">
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                <p class="font-bold">Usuário logado:</p>
+                <p id="user-email"></p>
+            </div>
+            <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" 
+                    type="button" id="logout-btn">
+                Sair
+            </button>
+        </div>
+        
+        <div id="message" class="mt-4"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://bsiayjdyqzptqoldrzbt.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzaWF5amR5cXpwdHFvbGRyemJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0NDQ3OTMsImV4cCI6MjA3MzAyMDc5M30.NtXnYByvWGes3-3aZ-BZ1FtHl8d88iFMeFxJ3Vveexw';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // Elementos do DOM
+        const authSection = document.getElementById('auth-section');
+        const userSection = document.getElementById('user-section');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const signupBtn = document.getElementById('signup-btn');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userEmail = document.getElementById('user-email');
+        const messageDiv = document.getElementById('message');
+        
+        // Função para mostrar mensagens
+        function showMessage(message, isError = false) {
+            messageDiv.innerHTML = `
+                <div class="${isError ? 'bg-red-100 border-red-400 text-red-700' : 'bg-green-100 border-green-400 text-green-700'} px-4 py-3 rounded">
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+        
+        // Função para atualizar a interface com base no estado do usuário
+        async function updateUI() {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            if (user) {
+                authSection.classList.add('hidden');
+                userSection.classList.remove('hidden');
+                userEmail.textContent = user.email;
+            } else {
+                authSection.classList.remove('hidden');
+                userSection.classList.add('hidden');
+            }
+        }
+        
+        // Função para criar conta
+        async function signUp() {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            if (!email || !password) {
+                showMessage('Por favor, preencha todos os campos.', true);
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                showMessage('Conta criada com sucesso! Você já pode fazer login.');
+            } catch (error) {
+                showMessage(`Erro: ${error.message}`, true);
+            }
+        }
+        
+        // Função para fazer login
+        async function signIn() {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            if (!email || !password) {
+                showMessage('Por favor, preencha todos os campos.', true);
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                showMessage('Login realizado com sucesso!');
+                updateUI();
+            } catch (error) {
+                showMessage(`Erro: ${error.message}`, true);
+            }
+        }
+        
+        // Função para fazer logout
+        async function signOut() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                
+                if (error) throw error;
+                
+                showMessage('Logout realizado com sucesso!');
+                updateUI();
+            } catch (error) {
+                showMessage(`Erro: ${error.message}`, true);
+            }
+        }
+        
+        // Event listeners
+        signupBtn.addEventListener('click', signUp);
+        loginBtn.addEventListener('click', signIn);
+        logoutBtn.addEventListener('click', signOut);
+        
+        // Verificar estado inicial do usuário
+        updateUI();
+        
+        // Listener para mudanças no estado de autenticação
+        supabase.auth.onAuthStateChange((event, session) => {
+            updateUI();
+        });
+    </script>
+</body>
+</html>

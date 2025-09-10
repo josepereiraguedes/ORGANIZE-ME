@@ -4,6 +4,7 @@ import { useConfig } from '../contexts/ConfigContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import DebugInfo from '../components/Debug/DebugInfo'; // Importar o componente de debug
 
 const Settings: React.FC = () => {
   const { company, updateCompany } = useConfig();
@@ -155,11 +156,20 @@ const Settings: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* PWA Installation Info */}
+      {/* Debug Information */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
+      >
+        <DebugInfo />
+      </motion.div>
+
+      {/* PWA Installation Info */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
         className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
       >
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
@@ -184,7 +194,7 @@ const Settings: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.4 }}
         className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
       >
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">

@@ -1,11 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { handleError } from '../utils/errorHandler';
 
+// Garantir que as variáveis de ambiente sejam carregadas corretamente no contexto do Vite
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Verificar se as variáveis estão definidas
 if (!supabaseUrl || !supabaseAnonKey) {
-  handleError(new Error("Supabase URL and Anon Key must be defined in .env file"), 'supabaseConfig');
+  const error = new Error("Supabase URL and Anon Key must be defined in .env file");
+  handleError(error, 'supabaseConfig');
+  throw error;
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -14,12 +18,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const signUp = async (email: string, password: string) => {
   try {
+    // Remover completamente a verificação de e-mail para simplificar o cadastro
     const result = await supabase.auth.signUp({ 
       email, 
-      password,
-      options: {
-        emailRedirectTo: `http://localhost:5210/confirm.html`
-      }
+      password
     });
     
     if (result.error) {
@@ -39,14 +41,10 @@ export const signUp = async (email: string, password: string) => {
 
 export const signIn = async (email: string, password: string) => {
   try {
-    // Tentar fazer login diretamente
+    // Tentar fazer login diretamente - ignorar status de confirmação de email
     const result = await supabase.auth.signInWithPassword({ email, password });
     
     if (result.error) {
-      // Tratar erro de email não confirmado
-      if (result.error.message.includes('Email not confirmed')) {
-        throw new Error('Por favor, verifique seu email e confirme sua conta antes de fazer login.');
-      }
       throw new Error(`Erro de login: ${result.error.message}`);
     }
     

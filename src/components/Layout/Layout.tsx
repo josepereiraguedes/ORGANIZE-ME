@@ -14,6 +14,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { useConfig } from '../../contexts/ConfigContext';
 import UserProfile from '../Auth/UserProfile';
+// Componentes de debug removidos
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -120,6 +121,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {children}
           </div>
         </main>
+        {/* Componentes de debug removidos */}
       </div>
     </div>
   );

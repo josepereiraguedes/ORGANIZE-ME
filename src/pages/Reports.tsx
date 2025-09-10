@@ -17,7 +17,16 @@ const Reports: React.FC = () => {
 
   const generateSalesReport = useMemo(() => {
     return () => {
-      const sales = transactions.filter(t => t.type === 'sale');
+      // Filtrar transações pelo período selecionado
+      const startDate = new Date(dateRange.start);
+      const endDate = new Date(dateRange.end);
+      endDate.setHours(23, 59, 59, 999); // Final do dia
+
+      const sales = transactions.filter(t => 
+        t.type === 'sale' && 
+        new Date(t.created_at) >= startDate && 
+        new Date(t.created_at) <= endDate
+      );
       
       // Agrupar vendas por produto
       const salesByProduct = sales.reduce((acc, sale) => {
@@ -47,7 +56,7 @@ const Reports: React.FC = () => {
       
       return Object.values(salesByProduct);
     };
-  }, [transactions, products]);
+  }, [transactions, products, dateRange]);
 
   const generateInventoryReport = useMemo(() => {
     return () => {
@@ -73,25 +82,42 @@ const Reports: React.FC = () => {
     return selectedReport === 'sales' ? generateSalesReport() : generateInventoryReport();
   }, [selectedReport, generateSalesReport, generateInventoryReport]);
 
-  // Função simplificada para gerar dados de vendas mensais sem depender de echarts
+  // Função corrigida para obter dados reais de vendas mensais
   const getMonthlySalesData = useMemo(() => {
     return () => {
       const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      const currentMonth = new Date().getMonth();
       
-      // Pega os últimos 4 meses
-      const last4Months = Array.from({ length: 4 }, (_, i) => {
-        const monthIndex = (currentMonth - i + 12) % 12;
-        return months[monthIndex];
-      }).reverse();
+      // Filtrar transações pelo período selecionado
+      const startDate = new Date(dateRange.start);
+      const endDate = new Date(dateRange.end);
+      endDate.setHours(23, 59, 59, 999);
+
+      // Agrupar vendas por mês
+      const monthlySales: Record<string, { name: string; sales: number }> = {};
       
-      // Dados simulados para os últimos 4 meses
-      return last4Months.map(month => ({
-        month,
-        sales: Math.floor(Math.random() * 5000) + 1000
-      }));
+      transactions
+        .filter(t => 
+          t.type === 'sale' && 
+          t.payment_status === 'paid' && // Apenas vendas pagas
+          new Date(t.created_at) >= startDate && 
+          new Date(t.created_at) <= endDate
+        )
+        .forEach(transaction => {
+          const date = new Date(transaction.created_at);
+          const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+          const monthName = months[date.getMonth()];
+          
+          if (!monthlySales[monthKey]) {
+            monthlySales[monthKey] = { name: monthName, sales: 0 };
+          }
+          
+          monthlySales[monthKey].sales += transaction.total;
+        });
+
+      // Converter para array ordenado
+      return Object.values(monthlySales);
     };
-  }, []);
+  }, [transactions, dateRange]);
 
   const monthlySalesData = useMemo(() => getMonthlySalesData(), [getMonthlySalesData]);
 
@@ -292,13 +318,7 @@ const Reports: React.FC = () => {
         </div>
       </div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ delay: 0.2 }}
-        style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)', padding: '1.5rem' }}
-        className={`dark:bg-gray-800`}
-      >
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Vendas Mensais</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -311,27 +331,16 @@ const Reports: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {monthlySalesData.map((data, index) => (
                 <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{data.month}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{data.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">R$ {data.sales.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </motion.div>
+      </div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ delay: 0.3 }}
-        style={{ 
-          backgroundColor: 'white',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-          padding: '1.5rem'
-        }}
-        className={`dark:bg-gray-800`}
-      >
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
           {selectedReport === 'sales' ? <TrendingUp className="w-5 h-5 mr-2" /> : <Package className="w-5 h-5 mr-2" />}
           {selectedReport === 'sales' ? 'Dados de Vendas' : 'Dados do Estoque'}
@@ -385,7 +394,7 @@ const Reports: React.FC = () => {
             </table>
           )}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

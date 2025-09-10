@@ -145,30 +145,35 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
    * Refresh all data from the database
    */
   const refreshData = useCallback(async () => {
+    if (!user) return; // Não carregar dados se não houver usuário
+    
     setLoading(true);
     try {
-      // Buscar produtos
+      // Buscar produtos do usuário atual
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
+        .eq('user_id', user.id) // Filtrar por usuário atual
         .order('created_at', { ascending: false });
       
       if (productsError) throw productsError;
       setProducts(productsData || []);
 
-      // Buscar clientes
+      // Buscar clientes do usuário atual
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
+        .eq('user_id', user.id) // Filtrar por usuário atual
         .order('created_at', { ascending: false });
       
       if (clientsError) throw clientsError;
       setClients(clientsData || []);
 
-      // Buscar transações
+      // Buscar transações do usuário atual
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('transactions')
         .select('*')
+        .eq('user_id', user.id) // Filtrar por usuário atual
         .order('created_at', { ascending: false });
       
       if (transactionsError) throw transactionsError;
@@ -179,16 +184,19 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   /**
    * Refresh only products data
    */
   const refreshProducts = useCallback(async () => {
+    if (!user) return; // Não carregar dados se não houver usuário
+    
     try {
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
+        .eq('user_id', user.id) // Filtrar por usuário atual
         .order('created_at', { ascending: false });
       
       if (productsError) throw productsError;
@@ -196,16 +204,19 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
     } catch (error) {
       handleSupabaseError(error, 'refreshProducts', true);
     }
-  }, []);
+  }, [user]);
 
   /**
    * Refresh only clients data
    */
   const refreshClients = useCallback(async () => {
+    if (!user) return; // Não carregar dados se não houver usuário
+    
     try {
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
+        .eq('user_id', user.id) // Filtrar por usuário atual
         .order('created_at', { ascending: false });
       
       if (clientsError) throw clientsError;
@@ -213,16 +224,19 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
     } catch (error) {
       handleSupabaseError(error, 'refreshClients', true);
     }
-  }, []);
+  }, [user]);
 
   /**
    * Refresh only transactions data
    */
   const refreshTransactions = useCallback(async () => {
+    if (!user) return; // Não carregar dados se não houver usuário
+    
     try {
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('transactions')
         .select('*')
+        .eq('user_id', user.id) // Filtrar por usuário atual
         .order('created_at', { ascending: false });
       
       if (transactionsError) throw transactionsError;
@@ -230,11 +244,19 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
     } catch (error) {
       handleSupabaseError(error, 'refreshTransactions', true);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    refreshData();
-  }, [refreshData]);
+    if (user) {
+      console.log('🔄 Carregando dados para o usuário:', user.id);
+      refreshData();
+    } else {
+      console.log('🚫 Nenhum usuário logado, limpando dados');
+      setProducts([]);
+      setClients([]);
+      setTransactions([]);
+    }
+  }, [refreshData, user]);
 
   /**
    * Add a new product to the database
@@ -242,6 +264,7 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
    */
   const addProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      console.log('➕ Adicionando produto para o usuário:', user?.id);
       const { error } = await supabase
         .from('products')
         .insert([{

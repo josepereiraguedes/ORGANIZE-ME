@@ -17,12 +17,7 @@ const LoginForm: React.FC = () => {
       if (isSignUp) {
         const result = await signUp(email, password);
         if (result.data?.user) {
-          // Verificar se o usuário já está confirmado ou se precisa confirmar pelo email
-          if (result.data.user.identities?.length === 0) {
-            toast.success('Conta criada com sucesso! Verifique seu email para confirmar.');
-          } else {
-            toast.success('Conta criada com sucesso!');
-          }
+          toast.success('Conta criada com sucesso! Você já pode fazer login.');
         }
       } else {
         await signIn(email, password);
@@ -30,9 +25,7 @@ const LoginForm: React.FC = () => {
     } catch (error: any) {
       console.error('Erro na autenticação:', error);
       // Tratar mensagens de erro específicas
-      if (error.message.includes('Email not confirmed')) {
-        toast.error('Por favor, verifique seu email e confirme sua conta antes de fazer login.');
-      } else if (error.message.includes('Invalid login credentials')) {
+      if (error.message.includes('Invalid login credentials')) {
         toast.error('Email ou senha incorretos.');
       } else if (error.message.includes('For security purposes, you can only request this after')) {
         // Extrair o tempo de espera da mensagem de erro
@@ -88,7 +81,7 @@ const LoginForm: React.FC = () => {
           </h2>
           {isSignUp && (
             <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-              Após criar a conta, você receberá um email de confirmação.
+              Após criar a conta, você poderá acessar o sistema imediatamente.
             </p>
           )}
         </div>

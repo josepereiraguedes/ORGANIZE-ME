@@ -6,7 +6,7 @@ interface AuthContextType {
   user: any;
   signIn: (email: string, password: string) => Promise<any>;
   signUp: (email: string, password: string) => Promise<any>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<any>; // Corrigido o tipo de retorno
   loading: boolean;
 }
 
@@ -52,10 +52,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await supabase.auth.signInWithPassword({ email, password });
       
       if (result.error) {
-        // Tratar erro de email não confirmado
-        if (result.error.message.includes('Email not confirmed')) {
-          throw new Error('Por favor, verifique seu email e confirme sua conta antes de fazer login.');
-        }
         throw new Error(`Erro de login: ${result.error.message}`);
       }
       
@@ -68,12 +64,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string) => {
     try {
+      // Remover completamente a verificação de e-mail para simplificar o cadastro
       const result = await supabase.auth.signUp({ 
         email, 
-        password,
-        options: {
-          emailRedirectTo: `http://localhost:5210/confirm.html`
-        }
+        password
       });
       
       if (result.error) {
@@ -96,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setUser(null);
-      return result;
+      return result; // Retornar o resultado em vez de undefined
     } catch (error) {
       handleError(error, 'auth', true);
       throw error;

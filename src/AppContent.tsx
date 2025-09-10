@@ -12,6 +12,7 @@ import TransactionForm from './components/Financial/TransactionForm';
 import Clients from './pages/Clients';
 import ClientForm from './components/Clients/ClientForm';
 import LoginForm from './components/Auth/LoginForm';
+// EnvInfo foi removido daqui
 import { useAuth } from './contexts/AuthContext';
 
 const AppContent: React.FC = () => {

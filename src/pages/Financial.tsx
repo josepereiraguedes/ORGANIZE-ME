@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -58,21 +58,50 @@ const Sales: React.FC = () => {
     return filteredTransactions.filter(t => t.type === 'purchase');
   }, [filteredTransactions]);
 
+  // Calcular os custos totais com base no custo real dos produtos vendidos
+  const totalCosts = useMemo(() => {
+    let costs = 0;
+    
+    // Para transações de compra, somar o valor total
+    purchases.forEach(transaction => {
+      costs += transaction.total || 0;
+    });
+    
+    return costs;
+  }, [purchases]);
+
+  // Calcular os custos reais das vendas com base no custo dos produtos
+  const actualSalesCosts = useMemo(() => {
+    let costs = 0;
+    
+    // Para transações de venda, calcular o custo real dos produtos vendidos
+    paidSales.forEach(transaction => {
+      const product = products.find(p => p.id === transaction.product_id);
+      if (product) {
+        // Calcular o custo real: custo do produto * quantidade vendida
+        costs += product.cost * transaction.quantity;
+      }
+    });
+    
+    return costs;
+  }, [paidSales, products]);
+
   const financialSummary = useMemo(() => {
     const totalRevenue = paidSales.reduce((sum, t) => sum + (t.total || 0), 0);
     const pendingReceivables = pendingSales.reduce((sum, t) => sum + (t.total || 0), 0);
-    const totalCosts = purchases.reduce((sum, t) => sum + (t.total || 0), 0);
-    const profit = totalRevenue - totalCosts;
+    // Usar o custo real das vendas em vez do valor total das compras
+    const costs = actualSalesCosts;
+    const profit = totalRevenue - costs;
     const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
     return {
       totalRevenue,
       pendingReceivables,
-      totalCosts,
+      totalCosts: costs,
       profit,
       profitMargin
     };
-  }, [paidSales, pendingSales, purchases]);
+  }, [paidSales, pendingSales, actualSalesCosts]);
 
   const financialCards = [
     { title: 'Receita (Paga)', value: `R$ ${financialSummary.totalRevenue.toFixed(2)}`, icon: TrendingUp, color: 'green' },
@@ -100,9 +129,12 @@ const Sales: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {financialCards.map((card, index) => (
-          <motion.div key={card.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div 
+            key={card.title} 
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{card.title}</p>
@@ -119,11 +151,11 @@ const Sales: React.FC = () => {
                 </span>
               </div>
             )}
-          </motion.div>
+          </div>
         ))}
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Histórico de Transações</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -183,7 +215,7 @@ const Sales: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-400">Nenhuma transação encontrada para o período selecionado</p>
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 };

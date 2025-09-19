@@ -85,6 +85,7 @@ const ProductForm: React.FC = () => {
       navigate('/inventory');
     } catch (error) {
       handleError(error, 'productForm');
+      toast.error('Erro ao salvar produto. Por favor, tente novamente.');
     } finally {
       setIsLoading(false);
     }

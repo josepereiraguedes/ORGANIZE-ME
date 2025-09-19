@@ -110,6 +110,15 @@ const Sales: React.FC = () => {
     { title: 'Lucro Líquido', value: `R$ ${financialSummary.profit.toFixed(2)}`, icon: DollarSign, color: financialSummary.profit >= 0 ? 'green' : 'red', change: `${financialSummary.profitMargin.toFixed(1)}%` }
   ];
 
+  // Precompute lookups for better performance
+  const productMap = useMemo(() => {
+    return new Map(products.map(p => [p.id, p]));
+  }, [products]);
+  
+  const clientMap = useMemo(() => {
+    return new Map(clients.map(c => [c.id, c]));
+  }, [clients]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -140,8 +149,24 @@ const Sales: React.FC = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{card.title}</p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">{card.value}</p>
               </div>
-              <div className={`p-3 rounded-full bg-${card.color}-100 dark:bg-${card.color}-900`}>
-                <card.icon className={`w-6 h-6 text-${card.color}-600 dark:text-${card.color}-400`} />
+              <div className={
+                `p-3 rounded-full ${
+                  card.color === 'green' ? 'bg-green-100 dark:bg-green-900' :
+                  card.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900' :
+                  card.color === 'red' ? 'bg-red-100 dark:bg-red-900' :
+                  card.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900' :
+                  'bg-gray-100 dark:bg-gray-900'
+                }`
+              }>
+                <card.icon className={
+                  `w-6 h-6 ${
+                    card.color === 'green' ? 'text-green-600 dark:text-green-400' :
+                    card.color === 'yellow' ? 'text-yellow-600 dark:text-yellow-400' :
+                    card.color === 'red' ? 'text-red-600 dark:text-red-400' :
+                    card.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
+                    'text-gray-600 dark:text-gray-400'
+                  }`
+                } />
               </div>
             </div>
             {card.change && (
@@ -172,8 +197,8 @@ const Sales: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {transactions.map((transaction) => {
-                const product = products.find(p => p.id === transaction.product_id);
-                const client = clients.find(c => c.id === transaction.client_id);
+                const product = productMap.get(transaction.product_id);
+                const client = clientMap.get(transaction.client_id);
                 return (
                   <tr key={transaction.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -206,7 +231,8 @@ const Sales: React.FC = () => {
                     </td>
                   </tr>
                 );
-              })}
+              })
+            }
 
             </tbody>
           </table>

@@ -11,7 +11,7 @@ Sistema completo de gestão de estoque e financeiro para pequenos negócios.
 - Relatórios em PDF e Excel
 - Modo claro/escuro
 - Funciona offline como PWA
-- **Autenticação de usuários** (novidade!)
+- **Autenticação por e-mail e senha**
 
 ## Tecnologias
 
@@ -19,8 +19,7 @@ Sistema completo de gestão de estoque e financeiro para pequenos negócios.
 - TypeScript
 - Vite
 - Tailwind CSS
-- Supabase (backend)
-- Dexie.js (IndexedDB para armazenamento local)
+- Supabase (backend e autenticação)
 - ECharts (visualização de dados)
 - jsPDF e xlsx (relatórios)
 
@@ -33,11 +32,12 @@ Sistema completo de gestão de estoque e financeiro para pequenos negócios.
 
 2. Configure as variáveis de ambiente:
    - Copie o arquivo [.env.example](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/.env.example) para [.env](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/.env)
-   - Preencha as credenciais do Supabase conforme o [SUPABASE_SETUP_GUIDE.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/SUPABASE_SETUP_GUIDE.md)
+   - Preencha as credenciais do Supabase conforme o guia abaixo
 
 3. Configure o banco de dados:
-   - Siga as instruções em [MANUAL_DATABASE_SETUP.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/MANUAL_DATABASE_SETUP.md)
-   - Ou execute o script SQL no painel do Supabase
+   - Acesse o painel do Supabase em https://app.supabase.io/
+   - Crie um novo projeto
+   - Execute o script SQL do arquivo [scripts/supabase-setup.sql](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\gestão%20dri\scripts\supabase-setup.sql) para criar as tabelas necessárias
 
 4. Inicie o servidor de desenvolvimento:
    ```bash
@@ -45,6 +45,56 @@ Sistema completo de gestão de estoque e financeiro para pequenos negócios.
    ```
 
 5. Acesse `http://localhost:5173`
+
+## Configuração do Banco de Dados (Supabase)
+
+1. Crie uma conta no [Supabase](https://supabase.com/)
+2. Crie um novo projeto
+3. No painel do projeto, vá para "Table Editor"
+4. Execute o script SQL do arquivo [scripts/supabase-setup.sql](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\gestão%20dri\scripts\supabase-setup.sql) para criar as tabelas necessárias
+5. Obtenha a URL do projeto e a chave anônima em "Project Settings" > "API"
+6. Atualize o arquivo [.env](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/.env) com essas informações:
+   ```
+   VITE_SUPABASE_URL="sua_url_do_supabase"
+   VITE_SUPABASE_ANON_KEY="sua_chave_anonima"
+   ```
+
+## Autenticação por E-mail e Senha
+
+O sistema agora suporta autenticação tradicional por e-mail e senha:
+
+1. **Cadastro simplificado**: Os usuários podem se registrar usando e-mail e senha
+2. **Acesso imediato**: Após o cadastro, o usuário pode acessar o sistema imediatamente
+3. **Segurança**: Cada usuário tem acesso apenas aos seus próprios dados
+4. **Privacidade**: Os dados são isolados por usuário através de políticas RLS (Row Level Security)
+
+### Usuários Padrão
+
+O sistema já vem com dois usuários pré-configurados:
+
+1. **Usuário 1**:
+   - E-mail: pereiraguedes1988@gmail.com
+   - Senha: 31051988
+
+2. **Usuário 2**:
+   - E-mail: josepereiraguedes@yahoo.com.br
+   - Senha: 31052025
+
+## Persistência de Dados
+
+O sistema utiliza o Supabase para armazenar todos os dados de forma persistente na nuvem. Cada usuário tem seus próprios dados isolados:
+
+- **Isolamento por usuário**: Cada conta tem seus próprios produtos, clientes e transações
+- **Segurança**: RLS (Row Level Security) garante que usuários só vejam seus próprios dados
+- **Persistência**: Os dados permanecem no banco mesmo após sair do sistema
+
+## Como construir para produção
+
+```bash
+yarn build
+```
+
+Os arquivos serão gerados no diretório `dist/`.
 
 ## Testes
 
@@ -109,67 +159,6 @@ O sistema foi verificado quanto às integrações críticas para garantir o func
 - ✅ **Frontend-Backend**: Conectividade plena com operações CRUD funcionais
 - ⚠️ **GitHub**: Funcional para repositórios públicos, requer autenticação para recursos avançados
 
-## Como construir para produção
-
-```bash
-yarn build
-```
-
-Os arquivos serão gerados no diretório `dist/`.
-
-## Configuração do Banco de Dados (Supabase)
-
-1. Crie uma conta no [Supabase](https://supabase.com/)
-2. Crie um novo projeto
-3. No painel do projeto, vá para "Table Editor"
-4. Execute o script SQL do arquivo [supabase-schema.sql](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/supabase-schema.sql) para criar as tabelas necessárias
-5. Obtenha a URL do projeto e a chave anônima em "Project Settings" > "API"
-6. Atualize o arquivo [.env](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/.env) com essas informações:
-   ```
-   VITE_SUPABASE_URL="sua_url_do_supabase"
-   VITE_SUPABASE_ANON_KEY="sua_chave_anonima"
-   ```
-
-## Autenticação de Usuários
-
-O sistema agora suporta autenticação de usuários através do Supabase Auth:
-
-1. Configure o provedor de autenticação no painel do Supabase (Email, Google, etc.)
-2. Os usuários podem se registrar e fazer login
-3. Cada usuário tem acesso apenas aos seus próprios dados
-4. A segurança é garantida através de políticas RLS (Row Level Security)
-
-### Configuração Detalhada
-
-Consulte o guia completo em [SUPABASE_SETUP_GUIDE.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/SUPABASE_SETUP_GUIDE.md) para instruções passo a passo.
-
-### Configuração Específica para Autenticação Sem Confirmação de Email
-
-Para que o sistema de autenticação simplificado funcione corretamente (sem confirmação de email), é necessário configurar corretamente o Supabase:
-
-1. Acesse https://app.supabase.com
-2. Selecione seu projeto
-3. Vá para **Authentication > Settings**
-4. **Ative** a opção **"Enable email signups"**
-5. **Desative** a opção **"Enable email confirmations"**
-6. Salve as alterações
-
-Consulte o guia completo em [CONFIG-SUPABASE-COMPLETA.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/CONFIG-SUPABASE-COMPLETA.md) para mais detalhes.
-
-## Persistência de Dados
-
-O sistema utiliza o Supabase para armazenar todos os dados de forma persistente na nuvem. Cada usuário tem seus próprios dados isolados:
-
-- **Isolamento por usuário**: Cada conta tem seus próprios produtos, clientes e transações
-- **Segurança**: RLS (Row Level Security) garante que usuários só vejam seus próprios dados
-- **Persistência**: Os dados permanecem no banco mesmo após sair do sistema
-
-⚠️ **Importante**: Se você sair e entrar com uma conta diferente, não verá os dados da conta anterior. Isso é uma característica de segurança.
-
-Consulte [PERSISTENCIA-DADOS.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/PERSISTENCIA-DADOS.md) para mais detalhes sobre como funciona a persistência de dados.
-
-Se estiver enfrentando problemas com dados que "somem", consulte [SOLUCAO-PROBLEMAS-PERSISTENCIA.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/SOLUCAO-PROBLEMAS-PERSISTENCIA.md) para um guia passo a passo de solução de problemas.
-
 ## Segurança em Produção
 
 Para implantação em ambiente de produção, siga as recomendações no guia de segurança:
@@ -198,100 +187,7 @@ O projeto inclui uma configuração de CI/CD usando GitHub Actions para deploy a
 ### Funcionamento:
 
 - Executa testes automaticamente em cada push
-- Faz deploy no Netlify apenas quando há push na branch `main`
-- Garante que apenas código testado seja implantado em produção
 
-## Solução de Problemas
+## Guia de Configuração Detalhado
 
-### Erro "Falha ao sincronizar produto com a nuvem"
-
-Este erro geralmente ocorre devido a inconsistências entre os nomes dos campos no código e no banco de dados. Verifique:
-
-1. Se as tabelas foram criadas corretamente no Supabase
-2. Se as credenciais no arquivo [.env](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/.env) estão corretas
-3. Se o script [supabase-schema.sql](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/supabase-schema.sql) foi executado completamente
-
-### Problemas com imagens
-
-Se estiver tendo problemas com ícones, verifique se os arquivos [icon-192.png](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/public/icon-192.png) e [icon-512.png](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/public/icon-512.png) existem no diretório [public/](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/public/).
-
-### Problemas de Autenticação
-
-Se estiver tendo problemas com login/cadastro:
-
-1. Verifique se as credenciais do Supabase estão corretas no [.env](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/.env)
-2. Confirme se o provedor de autenticação "Email" está habilitado no Supabase:
-   - Acesse https://app.supabase.com
-   - Selecione seu projeto
-   - Vá para **Authentication > Settings**
-   - **Ative** a opção **"Enable email signups"**
-   - **Desative** a opção **"Enable email confirmations"**
-3. Verifique se o script [supabase-schema.sql](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/supabase-schema.sql) foi executado
-4. Consulte o [SUPABASE_SETUP_GUIDE.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/SUPABASE_SETUP_GUIDE.md) para mais detalhes
-5. Consulte o [CONFIG-SUPABASE-COMPLETA.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/CONFIG-SUPABASE-COMPLETA.md) para instruções completas de configuração
-
-### Problemas com o Banco de Dados
-
-Se estiver tendo problemas com o banco de dados:
-
-1. Execute `npm run test:supabase` para verificar a configuração
-2. Siga as instruções em [MANUAL_DATABASE_SETUP.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/MANUAL_DATABASE_SETUP.md) para configurar as tabelas
-3. Certifique-se de que o script SQL foi executado no painel do Supabase
-
-### Problemas de Login
-
-Se estiver tendo problemas com login/cadastro:
-
-1. Consulte [SOLUCAO-ERRO-LOGIN.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/SOLUCAO-ERRO-LOGIN.md) para um guia completo de solução de problemas
-2. Verifique se as credenciais do Supabase estão corretas no [.env](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/.env)
-3. Confirme se o provedor de autenticação "Email" está habilitado no Supabase:
-   - Acesse https://app.supabase.com
-   - Selecione seu projeto
-   - Vá para **Authentication > Settings**
-   - **Ative** a opção **"Enable email signups"**
-   - **Desative** a opção **"Enable email confirmations"**
-
-### Dados Não Persistem ao Sair e Entrar
-
-Se os dados "somem" quando você sai e entra novamente:
-
-1. **Verifique se está usando a mesma conta**: Cada usuário tem seus próprios dados
-2. **Confirme suas credenciais**: Use o mesmo email e senha
-3. **Consulte [PERSISTENCIA-DADOS.md](file://C:/Users/perei/OneDrive/%C3%81rea%20de%20Trabalho/Atelie/PERSISTENCIA-DADOS.md) para mais detalhes**
-
-## Implantação no Netlify
-
-### Método 1: Deploy Automático (Recomendado)
-
-1. **Preparação do código**:
-   ```bash
-   # Execute o script de preparação para deploy
-   powershell -ExecutionPolicy Bypass -File .\deploy-netlify.ps1
-   ```
-
-2. **Faça login no Netlify** (https://netlify.com)
-
-3. **Crie um novo site** a partir do repositório Git
-
-4. **Configure as opções de build**:
-   - Build command: `yarn build`
-   - Publish directory: `dist`
-
-5. **Adicione as variáveis de ambiente** no painel do Netlify:
-   - `VITE_SUPABASE_URL` (sua URL do Supabase)
-   - `VITE_SUPABASE_ANON_KEY` (sua chave anônima do Supabase)
-
-6. **O site será automaticamente implantado** após cada push para o repositório
-
-### Método 2: Deploy Manual
-
-1. **Gere os arquivos de produção**:
-   ```bash
-   yarn build
-   ```
-
-2. **Faça login no Netlify**
-
-3. **Arraste a pasta `dist`** para a área de deploy do Netlify
-
-4. **Configure as variáveis de ambiente** no painel do Netlify
+Para instruções detalhadas sobre como configurar o Supabase, consulte o [SUPABASE_SETUP_GUIDE.md](file://c:\Users\perei\OneDrive\Área%20de%20Trabalho\gestão%20dri\SUPABASE_SETUP_GUIDE.md)

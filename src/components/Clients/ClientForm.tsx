@@ -46,6 +46,7 @@ const ClientForm: React.FC = () => {
       navigate('/clients');
     } catch (error) {
       handleError(error, 'clientForm');
+      toast.error('Erro ao salvar cliente. Por favor, tente novamente.');
     } finally {
       setIsLoading(false);
     }

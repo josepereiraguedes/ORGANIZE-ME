@@ -1,23 +1,44 @@
 import React, { useState } from 'react';
-import { Save, Upload, Building, Palette } from 'lucide-react';
+import { Save, Upload, Building, Palette, User } from 'lucide-react';
 import { useConfig } from '../contexts/ConfigContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { motion } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import toast from 'react-hot-toast';
-import DebugInfo from '../components/Debug/DebugInfo'; // Importar o componente de debug
 
 const Settings: React.FC = () => {
   const { company, updateCompany } = useConfig();
   const { theme, toggleTheme } = useTheme();
+  const { user, updateUser } = useAuth();
   const [formData, setFormData] = useState({
     name: company.name,
     logo: company.logo || ''
+  });
+  const [profileData, setProfileData] = useState({
+    name: user?.user_metadata?.name || '',
+    avatarUrl: user?.user_metadata?.avatar_url || ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateCompany(formData);
     toast.success('Configurações salvas com sucesso!');
+  };
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (user) {
+        await updateUser(user.id, { 
+          name: profileData.name,
+          avatar_url: profileData.avatarUrl
+        });
+        toast.success('Perfil atualizado com sucesso!');
+      }
+    } catch (error) {
+      toast.error('Erro ao atualizar perfil');
+      console.error('Erro ao atualizar perfil:', error);
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,17 +53,115 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setProfileData(prev => ({ ...prev, avatarUrl: result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
         Configurações
       </h1>
 
+      {/* User Profile Settings */}
+      {user && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
+        >
+          <div className="flex items-center mb-6">
+            <User className="w-6 h-6 text-blue-600 mr-3" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Perfil do Usuário
+            </h2>
+          </div>
+
+          <form onSubmit={handleProfileSubmit} className="space-y-6">
+            <div className="flex items-center space-x-6">
+              <div className="flex-shrink-0">
+                {profileData.avatarUrl ? (
+                  <img 
+                    className="h-16 w-16 rounded-full" 
+                    src={profileData.avatarUrl} 
+                    alt="Avatar" 
+                  />
+                ) : (
+                  <div className="bg-gray-200 border-2 border-dashed rounded-full w-16 h-16" />
+                )}
+              </div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                  id="avatar-upload"
+                />
+                <label
+                  htmlFor="avatar-upload"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Carregar Foto
+                </label>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  JPG, PNG ou GIF. Tamanho máximo 2MB.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Nome
+              </label>
+              <input
+                type="text"
+                value={profileData.name}
+                onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="Seu nome"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={user.email || ''}
+                disabled
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed"
+                placeholder="Seu e-mail"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Save className="w-5 h-5 mr-2" />
+              Salvar Perfil
+            </button>
+          </form>
+        </motion.div>
+      )}
+
       {/* Company Settings */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
+        transition={{ delay: 0.1 }}
+        {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
       >
         <div className="flex items-center mb-6">
           <Building className="w-6 h-6 text-blue-600 mr-3" />
@@ -110,8 +229,8 @@ const Settings: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
+        transition={{ delay: 0.2 }}
+        {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
       >
         <div className="flex items-center mb-6">
           <Palette className="w-6 h-6 text-purple-600 mr-3" />
@@ -156,21 +275,12 @@ const Settings: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Debug Information */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <DebugInfo />
-      </motion.div>
-
       {/* PWA Installation Info */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
+        {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
       >
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           Instalação do Aplicativo
@@ -195,7 +305,7 @@ const Settings: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
+        {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
       >
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           Informações do Sistema

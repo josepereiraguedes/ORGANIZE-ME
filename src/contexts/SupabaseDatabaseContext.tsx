@@ -1,7 +1,20 @@
 import React, { createContext, useEffect, useState, useCallback } from 'react';
-import { supabase } from '../services/supabase';
+import { 
+  supabase, 
+  getProducts, 
+  addProduct as addProductService, 
+  updateProduct as updateProductService, 
+  deleteProduct as deleteProductService,
+  getClients,
+  addClient as addClientService,
+  updateClient as updateClientService,
+  deleteClient as deleteClientService,
+  getTransactions,
+  addTransaction as addTransactionService,
+  updateTransactionStatus as updateTransactionStatusService,
+  getFinancialSummary as getFinancialSummaryService
+} from '../services/supabase';
 import toast from 'react-hot-toast';
-import { handleSupabaseError } from '../utils/errorHandler';
 import { useAuth } from './AuthContext';
 
 /**
@@ -30,6 +43,8 @@ export interface Product {
   created_at: string;
   /** Last update timestamp */
   updated_at: string;
+  /** User ID for RLS */
+  user_id?: string;
 }
 
 /**
@@ -50,6 +65,8 @@ export interface Client {
   created_at: string;
   /** Last update timestamp */
   updated_at: string;
+  /** User ID for RLS */
+  user_id?: string;
 }
 
 /**
@@ -76,6 +93,16 @@ export interface Transaction {
   description?: string;
   /** Creation timestamp */
   created_at: string;
+  /** User ID for RLS */
+  user_id?: string;
+  /** Product details (for display) */
+  product?: {
+    name: string;
+  };
+  /** Client details (for display) */
+  client?: {
+    name: string;
+  };
 }
 
 /**
@@ -105,19 +132,19 @@ interface SupabaseDatabaseContextType {
   /** Array of all transactions */
   transactions: Transaction[];
   /** Function to add a new product */
-  addProduct: (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => Promise<void>;
   /** Function to update an existing product */
   updateProduct: (id: number, product: Partial<Product>) => Promise<void>;
   /** Function to delete a product */
   deleteProduct: (id: number) => Promise<void>;
   /** Function to add a new client */
-  addClient: (client: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  addClient: (client: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => Promise<void>;
   /** Function to update an existing client */
   updateClient: (id: number, client: Partial<Client>) => Promise<void>;
   /** Function to delete a client */
   deleteClient: (id: number) => Promise<void>;
   /** Function to add a new transaction */
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'created_at'>) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'created_at' | 'user_id'>) => Promise<void>;
   /** Function to update transaction payment status */
   updateTransactionStatus: (id: number, status: 'paid' | 'pending') => Promise<void>;
   /** Function to get financial summary */
@@ -142,389 +169,322 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
   const { user } = useAuth();
 
   /**
-   * Refresh all data from the database
+   * Get current user ID from session
+   */
+  const getCurrentUserId = useCallback(() => {
+    try {
+      if (user && user.id) {
+        return user.id;
+      }
+      return null;
+    } catch (error) {
+      console.error('Erro ao obter ID do usuário:', error);
+      return null;
+    }
+  }, [user]);
+
+  /**
+   * Refresh all data from Supabase
    */
   const refreshData = useCallback(async () => {
-    if (!user) return; // Não carregar dados se não houver usuário
-    
-    setLoading(true);
-    try {
-      // Buscar produtos do usuário atual
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('user_id', user.id) // Filtrar por usuário atual
-        .order('created_at', { ascending: false });
-      
-      if (productsError) throw productsError;
-      setProducts(productsData || []);
-
-      // Buscar clientes do usuário atual
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('user_id', user.id) // Filtrar por usuário atual
-        .order('created_at', { ascending: false });
-      
-      if (clientsError) throw clientsError;
-      setClients(clientsData || []);
-
-      // Buscar transações do usuário atual
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id) // Filtrar por usuário atual
-        .order('created_at', { ascending: false });
-      
-      if (transactionsError) throw transactionsError;
-      setTransactions(transactionsData || []);
-
-    } catch (error) {
-      handleSupabaseError(error, 'refreshData', true);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  /**
-   * Refresh only products data
-   */
-  const refreshProducts = useCallback(async () => {
-    if (!user) return; // Não carregar dados se não houver usuário
-    
-    try {
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('user_id', user.id) // Filtrar por usuário atual
-        .order('created_at', { ascending: false });
-      
-      if (productsError) throw productsError;
-      setProducts(productsData || []);
-    } catch (error) {
-      handleSupabaseError(error, 'refreshProducts', true);
-    }
-  }, [user]);
-
-  /**
-   * Refresh only clients data
-   */
-  const refreshClients = useCallback(async () => {
-    if (!user) return; // Não carregar dados se não houver usuário
-    
-    try {
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('user_id', user.id) // Filtrar por usuário atual
-        .order('created_at', { ascending: false });
-      
-      if (clientsError) throw clientsError;
-      setClients(clientsData || []);
-    } catch (error) {
-      handleSupabaseError(error, 'refreshClients', true);
-    }
-  }, [user]);
-
-  /**
-   * Refresh only transactions data
-   */
-  const refreshTransactions = useCallback(async () => {
-    if (!user) return; // Não carregar dados se não houver usuário
-    
-    try {
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id) // Filtrar por usuário atual
-        .order('created_at', { ascending: false });
-      
-      if (transactionsError) throw transactionsError;
-      setTransactions(transactionsData || []);
-    } catch (error) {
-      handleSupabaseError(error, 'refreshTransactions', true);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      console.log('🔄 Carregando dados para o usuário:', user.id);
-      refreshData();
-    } else {
-      console.log('🚫 Nenhum usuário logado, limpando dados');
+    // Verificar se há um usuário autenticado
+    const userId = getCurrentUserId();
+    if (!userId) {
+      // Não carregar dados se não houver usuário logado
       setProducts([]);
       setClients([]);
       setTransactions([]);
+      return;
     }
+    
+    setLoading(true);
+    try {
+      // Carregar dados do Supabase em paralelo
+      const [productsData, clientsData, transactionsData] = await Promise.all([
+        getProducts(userId),
+        getClients(userId),
+        getTransactions(userId)
+      ]);
+      
+      setProducts(productsData || []);
+      setClients(clientsData || []);
+      setTransactions(transactionsData || []);
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      // Em caso de erro, usar arrays vazios
+      setProducts([]);
+      setClients([]);
+      setTransactions([]);
+      toast.error('Erro ao carregar dados. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, [getCurrentUserId]);
+
+  // Efeito para carregar dados quando o componente monta ou quando o usuário muda
+  useEffect(() => {
+    refreshData();
   }, [refreshData, user]);
 
   /**
-   * Add a new product to the database
-   * @param productData - Product data without id, created_at, and updated_at
+   * Add a new product
    */
-  const addProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
+  const addProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     try {
-      console.log('➕ Adicionando produto para o usuário:', user?.id);
-      const { error } = await supabase
-        .from('products')
-        .insert([{
-          ...productData,
-          user_id: user?.id, // Adicionar o ID do usuário
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select();
+      // Obter o ID do usuário logado
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
       
-      if (error) throw error;
-      await refreshProducts();
+      // Adicionar produto no Supabase
+      const newProduct = await addProductService(productData, userId);
+      
+      // Atualizar estado local
+      setProducts(prev => [...prev, newProduct]);
+      
       toast.success('Produto adicionado com sucesso!');
     } catch (error) {
-      handleSupabaseError(error, 'product');
+      console.error('Erro ao adicionar produto:', error);
+      toast.error('Erro ao adicionar produto');
       throw error;
     }
   };
 
   /**
-   * Update an existing product in the database
-   * @param id - ID of the product to update
-   * @param productData - Partial product data to update
+   * Update an existing product
    */
   const updateProduct = async (id: number, productData: Partial<Product>) => {
     try {
-      const { error } = await supabase
-        .from('products')
-        .update({
-          ...productData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .eq('user_id', user?.id); // Garantir que o usuário só atualize seus próprios produtos
+      // Obter o ID do usuário logado
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
       
-      if (error) throw error;
-      await refreshProducts();
+      // Atualizar produto no Supabase
+      const updatedProduct = await updateProductService(id, productData, userId);
+      
+      // Atualizar estado local
+      setProducts(prev => 
+        prev.map(product => 
+          product.id === id ? updatedProduct : product
+        )
+      );
+      
       toast.success('Produto atualizado com sucesso!');
     } catch (error) {
-      handleSupabaseError(error, 'product');
+      console.error('Erro ao atualizar produto:', error);
+      toast.error('Erro ao atualizar produto');
       throw error;
     }
   };
 
   /**
-   * Delete a product from the database
-   * @param id - ID of the product to delete
+   * Delete a product
    */
   const deleteProduct = async (id: number) => {
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id); // Garantir que o usuário só delete seus próprios produtos
+      // Obter o ID do usuário logado
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
       
-      if (error) throw error;
-      await refreshProducts();
+      // Excluir produto no Supabase
+      await deleteProductService(id, userId);
+      
+      // Atualizar estado local
+      setProducts(prev => prev.filter(product => product.id !== id));
+      
       toast.success('Produto excluído com sucesso!');
     } catch (error) {
-      handleSupabaseError(error, 'product');
+      console.error('Erro ao excluir produto:', error);
+      toast.error('Erro ao excluir produto');
       throw error;
     }
   };
 
   /**
-   * Add a new client to the database
-   * @param clientData - Client data without id, created_at, and updated_at
+   * Add a new client
    */
-  const addClient = async (clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
+  const addClient = async (clientData: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     try {
-      const { error } = await supabase
-        .from('clients')
-        .insert([{
-          ...clientData,
-          user_id: user?.id, // Adicionar o ID do usuário
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select();
+      // Obter o ID do usuário logado
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
       
-      if (error) throw error;
-      await refreshClients();
+      // Adicionar cliente no Supabase
+      const newClient = await addClientService(clientData, userId);
+      
+      // Atualizar estado local
+      setClients(prev => [...prev, newClient]);
+      
       toast.success('Cliente adicionado com sucesso!');
     } catch (error) {
-      handleSupabaseError(error, 'client');
+      console.error('Erro ao adicionar cliente:', error);
+      toast.error('Erro ao adicionar cliente');
       throw error;
     }
   };
 
   /**
-   * Update an existing client in the database
-   * @param id - ID of the client to update
-   * @param clientData - Partial client data to update
+   * Update an existing client
    */
   const updateClient = async (id: number, clientData: Partial<Client>) => {
     try {
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          ...clientData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .eq('user_id', user?.id); // Garantir que o usuário só atualize seus próprios clientes
+      // Obter o ID do usuário logado
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
       
-      if (error) throw error;
-      await refreshClients();
+      // Atualizar cliente no Supabase
+      const updatedClient = await updateClientService(id, clientData, userId);
+      
+      // Atualizar estado local
+      setClients(prev => 
+        prev.map(client => 
+          client.id === id ? updatedClient : client
+        )
+      );
+      
       toast.success('Cliente atualizado com sucesso!');
     } catch (error) {
-      handleSupabaseError(error, 'client');
+      console.error('Erro ao atualizar cliente:', error);
+      toast.error('Erro ao atualizar cliente');
       throw error;
     }
   };
 
   /**
-   * Delete a client from the database
-   * @param id - ID of the client to delete
+   * Delete a client
    */
   const deleteClient = async (id: number) => {
     try {
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id); // Garantir que o usuário só delete seus próprios clientes
+      // Obter o ID do usuário logado
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
       
-      if (error) throw error;
-      await refreshClients();
+      // Excluir cliente no Supabase
+      await deleteClientService(id, userId);
+      
+      // Atualizar estado local
+      setClients(prev => prev.filter(client => client.id !== id));
+      
       toast.success('Cliente excluído com sucesso!');
     } catch (error) {
-      handleSupabaseError(error, 'client');
+      console.error('Erro ao excluir cliente:', error);
+      toast.error('Erro ao excluir cliente');
       throw error;
     }
   };
 
   /**
-   * Add a new transaction to the database
-   * @param transactionData - Transaction data without id and created_at
+   * Add a new transaction
    */
-  const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'created_at'>) => {
+  const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'created_at' | 'user_id'>) => {
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .insert([{
-          ...transactionData,
-          user_id: user?.id, // Adicionar o ID do usuário
-          created_at: new Date().toISOString()
-        }])
-        .select();
-      
-      if (error) throw error;
-
-      // Atualizar estoque do produto
-      if (transactionData.type === 'sale' || transactionData.type === 'purchase' || transactionData.type === 'adjustment') {
-        const { data: productData, error: productError } = await supabase
-          .from('products')
-          .select('quantity')
-          .eq('id', transactionData.product_id)
-          .eq('user_id', user?.id) // Garantir que o usuário só acesse seus próprios produtos
-          .single();
-        
-        if (productError) throw productError;
-
-        let newQuantity = Number(productData.quantity);
-        if (transactionData.type === 'sale') {
-          newQuantity -= Number(transactionData.quantity);
-        } else if (transactionData.type === 'purchase') {
-          newQuantity += Number(transactionData.quantity);
-        } else if (transactionData.type === 'adjustment') {
-          newQuantity = Number(transactionData.quantity);
-        }
-
-        await supabase
-          .from('products')
-          .update({ 
-            quantity: newQuantity,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', transactionData.product_id)
-          .eq('user_id', user?.id); // Garantir que o usuário só atualize seus próprios produtos
+      // Obter o ID do usuário logado
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
       }
-
-      await refreshTransactions();
-      // Também precisamos atualizar os produtos pois o estoque pode ter mudado
-      await refreshProducts();
+      
+      // Adicionar transação no Supabase
+      const newTransaction = await addTransactionService(transactionData, userId);
+      
+      // Atualizar estado local
+      setTransactions(prev => [newTransaction, ...prev]);
+      
+      // Atualizar estoque do produto
+      setProducts(prev => 
+        prev.map(product => {
+          if (product.id === transactionData.product_id) {
+            let newQuantity = product.quantity;
+            if (transactionData.type === 'sale') {
+              newQuantity -= transactionData.quantity;
+            } else if (transactionData.type === 'purchase') {
+              newQuantity += transactionData.quantity;
+            } else if (transactionData.type === 'adjustment') {
+              newQuantity = transactionData.quantity;
+            }
+            return { ...product, quantity: newQuantity };
+          }
+          return product;
+        })
+      );
+      
       toast.success('Transação registrada com sucesso!');
     } catch (error) {
-      handleSupabaseError(error, 'transaction');
+      console.error('Erro ao registrar transação:', error);
+      toast.error('Erro ao registrar transação');
       throw error;
     }
   };
 
   /**
    * Update transaction payment status
-   * @param id - ID of the transaction to update
-   * @param status - New payment status
    */
   const updateTransactionStatus = async (id: number, status: 'paid' | 'pending') => {
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .update({ payment_status: status })
-        .eq('id', id)
-        .eq('user_id', user?.id); // Garantir que o usuário só atualize suas próprias transações
+      // Obter o ID do usuário logado
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
+      }
       
-      if (error) throw error;
-      await refreshTransactions();
+      // Atualizar status da transação no Supabase
+      const updatedTransaction = await updateTransactionStatusService(id, status, userId);
+      
+      // Atualizar estado local
+      setTransactions(prev => 
+        prev.map(transaction => 
+          transaction.id === id ? updatedTransaction : transaction
+        )
+      );
+      
       toast.success('Status da transação atualizado com sucesso!');
     } catch (error) {
-      handleSupabaseError(error, 'transaction');
+      console.error('Erro ao atualizar status da transação:', error);
+      toast.error('Erro ao atualizar status da transação');
       throw error;
     }
   };
 
   /**
-   * Get financial summary for a date range
-   * @param startDate - Start date for the summary (optional)
-   * @param endDate - End date for the summary (optional)
-   * @returns Financial summary data
+   * Get financial summary
    */
   const getFinancialSummary = async (startDate?: Date, endDate?: Date): Promise<FinancialSummary> => {
     try {
-      let query = supabase.from('transactions').select('*');
-      
-      if (startDate || endDate) {
-        if (startDate) {
-          query = query.gte('created_at', startDate.toISOString());
-        }
-        if (endDate) {
-          query = query.lte('created_at', endDate.toISOString());
-        }
+      // Obter o ID do usuário logado
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error('Usuário não autenticado');
       }
-
-      const { data: transactionsData, error } = await query;
-      if (error) throw error;
-
-      const filteredTransactions = transactionsData || [];
       
-      const paidSales = filteredTransactions.filter(t => t.type === 'sale' && t.payment_status === 'paid');
-      const pendingSales = filteredTransactions.filter(t => t.type === 'sale' && t.payment_status === 'pending');
-      const purchases = filteredTransactions.filter(t => t.type === 'purchase');
-
-      const totalRevenue = paidSales.reduce((sum, t) => sum + (t.total || 0), 0);
-      const pendingReceivables = pendingSales.reduce((sum, t) => sum + (t.total || 0), 0);
-      const totalCosts = purchases.reduce((sum, t) => sum + (t.total || 0), 0);
+      // Converter datas para strings no formato ISO
+      const startDateStr = startDate ? startDate.toISOString() : undefined;
+      const endDateStr = endDate ? endDate.toISOString() : undefined;
       
-      const profit = totalRevenue - totalCosts;
-      const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
-
-      return {
-        totalRevenue,
-        totalCosts,
-        profit,
-        profitMargin,
-        pendingReceivables
-      };
+      // Obter resumo financeiro do Supabase
+      const summary = await getFinancialSummaryService(userId, startDateStr, endDateStr);
+      
+      return summary;
     } catch (error) {
-      handleSupabaseError(error, 'financialSummary');
-      throw error;
+      console.error('Erro ao obter resumo financeiro:', error);
+      // Retornar valores padrão em caso de erro
+      return {
+        totalRevenue: 0,
+        totalCosts: 0,
+        profit: 0,
+        profitMargin: 0,
+        pendingReceivables: 0
+      };
     }
   };
 

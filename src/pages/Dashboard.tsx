@@ -65,46 +65,51 @@ const Dashboard: React.FC = () => {
     },
   ], [financialData, totalValue, totalProducts]);
 
-  // Função corrigida para calcular vendas dos últimos 7 dias na ordem correta
-  const getLast7DaysSales = useMemo(() => {
-    return () => {
-      const today = new Date();
-      // Criar array com os últimos 7 dias na ordem correta (segunda a domingo)
-      const last7Days = Array.from({ length: 7 }, (_, i) => {
-        const date = new Date(today);
-        // Calcular os dias corretos da semana (segunda é 1, domingo é 0)
-        const dayOfWeek = today.getDay();
-        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) + i;
-        date.setDate(diff);
-        return date;
-      });
+  // Calcular vendas dos últimos 7 dias na ordem correta
+  const last7DaysSales = useMemo(() => {
+    const today = new Date();
+    // Criar array com os últimos 7 dias na ordem correta (segunda a domingo)
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(today);
+      // Calcular os dias corretos da semana (segunda é 1, domingo é 0)
+      const dayOfWeek = today.getDay();
+      const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) + i;
+      date.setDate(diff);
+      return date;
+    });
 
-      return last7Days.map(day => {
-        const dayStart = new Date(day);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(day);
-        dayEnd.setHours(23, 59, 59, 999);
+    return last7Days.map(day => {
+      const dayStart = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
 
-        const daySales = transactions
-          .filter(t => 
-            t.type === 'sale' && 
-            t.payment_status === 'paid' && // Apenas vendas pagas
-            new Date(t.created_at) >= dayStart && 
-            new Date(t.created_at) <= dayEnd
-          )
-          .reduce((sum, t) => sum + t.total, 0);
+      const daySales = transactions
+        .filter(t => 
+          t.type === 'sale' && 
+          t.payment_status === 'paid' && // Apenas vendas pagas
+          new Date(t.created_at) >= dayStart && 
+          new Date(t.created_at) <= dayEnd
+        )
+        .reduce((sum, t) => sum + t.total, 0);
 
-        // Formatar o dia da semana corretamente
-        const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-        return {
-          date: weekdays[day.getDay()],
-          sales: daySales
-        };
-      });
-    };
+      // Formatar o dia da semana corretamente
+      const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      return {
+        date: weekdays[day.getDay()],
+        sales: daySales
+      };
+    });
   }, [transactions]);
 
-  const last7DaysSales = useMemo(() => getLast7DaysSales(), [getLast7DaysSales]);
+  // Precompute lookups for better performance
+  const productMap = useMemo(() => {
+    return new Map(products.map(p => [p.id, p]));
+  }, [products]);
+  
+  const clientMap = useMemo(() => {
+    return new Map(clients.map(c => [c.id, c]));
+  }, [clients]);
 
   return (
     <div className="space-y-6">
@@ -132,8 +137,24 @@ const Dashboard: React.FC = () => {
                   {stat.value}
                 </p>
               </div>
-              <div className={`p-3 rounded-full bg-${stat.color}-100 dark:bg-${stat.color}-900`}>
-                <stat.icon className={`w-6 h-6 text-${stat.color}-600 dark:text-${stat.color}-400`} />
+              <div className={
+                `p-3 rounded-full ${
+                  stat.color === 'purple' ? 'bg-purple-100 dark:bg-purple-900' :
+                  stat.color === 'orange' ? 'bg-orange-100 dark:bg-orange-900' :
+                  stat.color === 'green' ? 'bg-green-100 dark:bg-green-900' :
+                  stat.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900' :
+                  'bg-gray-100 dark:bg-gray-900'
+                }`
+              }>
+                <stat.icon className={
+                  `w-6 h-6 ${
+                    stat.color === 'purple' ? 'text-purple-600 dark:text-purple-400' :
+                    stat.color === 'orange' ? 'text-orange-600 dark:text-orange-400' :
+                    stat.color === 'green' ? 'text-green-600 dark:text-green-400' :
+                    stat.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
+                    'text-gray-600 dark:text-gray-400'
+                  }`
+                } />
               </div>
             </div>
           </div>
@@ -217,8 +238,8 @@ const Dashboard: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {transactions.slice(-5).reverse().map((transaction) => {
-                const product = products.find(p => p.id === transaction.product_id);
-                const client = clients.find(c => c.id === transaction.client_id);
+                const product = productMap.get(transaction.product_id);
+                const client = clientMap.get(transaction.client_id);
                 return (
                   <tr key={transaction.id}>
                     <td className="px-6 py-4 whitespace-nowrap">

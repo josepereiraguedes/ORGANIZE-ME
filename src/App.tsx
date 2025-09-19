@@ -8,13 +8,13 @@ import AppContent from './AppContent';
 function App() {
   return (
     <AuthProvider>
-      <SupabaseDatabaseProvider>
-        <ConfigProvider>
-          <ThemeProvider>
+      <ConfigProvider>
+        <ThemeProvider>
+          <SupabaseDatabaseProvider>
             <AppContent />
-          </ThemeProvider>
-        </ConfigProvider>
-      </SupabaseDatabaseProvider>
+          </SupabaseDatabaseProvider>
+        </ThemeProvider>
+      </ConfigProvider>
     </AuthProvider>
   );
 }

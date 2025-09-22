@@ -2,36 +2,36 @@
 
 ## Visão Geral
 
-Este documento descreve as práticas de segurança implementadas no sistema e fornece recomendações para melhorar a segurança em ambientes de produção.
+Este documento descreve as práticas de segurança implementadas no sistema local de gestão de estoque.
 
-## Identificação de Riscos
+## Características de Segurança do Sistema Local
 
-### 1. Exposição de Credenciais Sensíveis
+### 1. Dados Armazenados Localmente
 
-**Problema**: A chave de serviço (`VITE_SUPABASE_SERVICE_ROLE_KEY`) está exposta no arquivo `.env`, que é acessível no lado do cliente.
+**Característica**: Todos os dados são armazenados localmente no dispositivo do usuário, no localStorage do navegador.
 
-**Impacto**: Qualquer pessoa com acesso ao código do cliente pode obter a chave de serviço, permitindo acesso irrestrito ao banco de dados.
+**Benefícios**:
+- Os dados nunca deixam o dispositivo do usuário
+- Não há transmissão de dados pela internet
+- O usuário tem controle total sobre seus dados
 
-**Solução Implementada**:
-- O sistema utiliza uma abordagem híbrida onde a maioria das operações usa o cliente administrativo com a chave de serviço apenas nos scripts do lado do servidor.
-- Para operações do lado do cliente, o sistema usa autenticação personalizada que verifica senhas diretamente no banco de dados.
+### 2. Autenticação Local
 
-**Recomendações para Produção**:
-1. **Migre para um Backend Próprio**: Crie uma API backend própria que gerencie todas as operações sensíveis do banco de dados.
-2. **Use Funções do Supabase**: Implemente funções do lado do servidor no Supabase para operações sensíveis.
-3. **Implemente RLS Corretamente**: Configure políticas de segurança de nível de linha (RLS) adequadas para proteger os dados.
+**Característica**: O sistema utiliza autenticação local por e-mail e senha com usuários pré-configurados.
 
-### 2. Armazenamento de Senhas
+**Implementação**:
+- Senhas são armazenadas como hashes bcrypt
+- Verificação de senhas ocorre localmente no dispositivo do usuário
+- Não há comunicação com servidores externos para autenticação
 
-**Problema**: As senhas dos usuários são armazenadas como hashes no banco de dados, o que é uma boa prática, mas o sistema depende de acesso administrativo para verificar senhas.
+### 3. Isolamento de Dados por Usuário
 
-**Solução Implementada**:
-- Uso de bcrypt para hashing de senhas.
-- Verificação de senhas diretamente no banco de dados usando o cliente administrativo.
+**Característica**: Cada usuário tem seus próprios dados isolados no localStorage.
 
-**Recomendações para Produção**:
-1. **Use Autenticação do Supabase**: Configure corretamente a autenticação do Supabase em vez de usar autenticação personalizada.
-2. **Implemente OAuth**: Adicione suporte para login via provedores OAuth (Google, Facebook, etc.).
+**Implementação**:
+- Os dados são armazenados com chaves específicas para cada usuário
+- Um usuário não pode acessar os dados de outro usuário
+- O isolamento é feito com base no ID do usuário
 
 ## Recomendações de Segurança
 
@@ -39,44 +39,45 @@ Este documento descreve as práticas de segurança implementadas no sistema e fo
 
 1. **Não use credenciais reais**: Use credenciais de teste em ambientes de desenvolvimento.
 2. **Gitignore**: Certifique-se de que o arquivo `.env` está no `.gitignore`.
-3. **Variáveis de ambiente**: Use variáveis de ambiente para todas as credenciais sensíveis.
+3. **Variáveis de ambiente**: Use variáveis de ambiente para todas as configurações sensíveis.
 
-### Para Ambiente de Produção
+### Para Uso em Produção
 
-1. **Backend Próprio**:
-   - Crie uma API backend usando Node.js, Python, etc.
-   - Mova todas as operações sensíveis do banco de dados para o backend.
-   - Use o cliente Supabase apenas no backend com a chave de serviço.
+1. **Backup de Dados**:
+   - Recomenda-se que os usuários façam backup regular dos dados
+   - Utilize a função de exportação de dados para salvar os dados em arquivo
 
-2. **Configuração do Supabase**:
-   - Habilite RLS (Row Level Security) para todas as tabelas.
-   - Configure políticas adequadas para cada tabela.
-   - Use funções do lado do servidor para operações complexas.
+2. **Atualizações de Segurança**:
+   - Mantenha o sistema atualizado com as últimas versões das dependências
+   - Verifique regularmente por vulnerabilidades nas bibliotecas utilizadas
 
-3. **Autenticação**:
-   - Use a autenticação nativa do Supabase.
-   - Implemente refresh tokens corretamente.
-   - Use JWT tokens para autenticação entre frontend e backend.
-
-4. **Monitoramento**:
-   - Habilite logs de auditoria no Supabase.
-   - Monitore acessos não autorizados.
-   - Implemente rate limiting para prevenir ataques de força bruta.
+3. **Proteção do Dispositivo**:
+   - Utilize senhas fortes para desbloquear o dispositivo
+   - Mantenha o sistema operacional e o navegador atualizados
+   - Utilize antivírus e firewall
 
 ## Práticas de Segurança Implementadas
 
 1. **Hashing de Senhas**: Todas as senhas são armazenadas como hashes bcrypt.
-2. **Autenticação Personalizada**: Sistema de fallback para autenticação quando o Supabase Auth não está disponível.
+2. **Autenticação Local**: Sistema de autenticação que funciona completamente offline.
 3. **Tratamento de Erros**: Mensagens de erro genéricas para evitar vazamento de informações.
 4. **Persistência Segura**: Uso de localStorage para persistência de sessão com dados limitados.
+5. **Isolamento de Dados**: Cada usuário tem seus dados isolados no armazenamento local.
 
-## Próximos Passos
+## Compartilhamento de Dados entre Dispositivos
 
-1. **Implementar Backend Próprio**: Crie uma API backend para gerenciar todas as operações do banco de dados.
-2. **Configurar RLS Adequado**: Implemente políticas de segurança de nível de linha corretas.
-3. **Migrar para Autenticação do Supabase**: Use a autenticação nativa do Supabase em vez da personalizada.
-4. **Adicionar Monitoramento**: Implemente logs de auditoria e monitoramento de segurança.
+### Segurança na Exportação/Importação
+
+1. **Exportação de Dados**:
+   - Os dados são exportados em formato JSON
+   - O arquivo exportado contém todos os dados do usuário
+   - Recomenda-se proteger o arquivo exportado com senha se for compartilhado
+
+2. **Importação de Dados**:
+   - A importação substitui os dados atuais do usuário
+   - É criado um backup automático antes da importação
+   - Apenas arquivos JSON válidos podem ser importados
 
 ## Conclusão
 
-O sistema atual implementa práticas de segurança básicas, mas para uso em produção, recomenda-se fortemente a implementação de um backend próprio e a configuração adequada do Supabase RLS e Auth.
+O sistema local implementa práticas de segurança adequadas para uma aplicação que roda totalmente no dispositivo do usuário. Como todos os dados permanecem localmente, o maior risco é a perda de dados devido a falhas no dispositivo ou no navegador. Recomenda-se que os usuários façam backup regular dos dados utilizando a função de exportação.

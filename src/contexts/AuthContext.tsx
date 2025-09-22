@@ -1,27 +1,19 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { 
-  supabase, 
-  getCurrentUser, 
-  signInWithEmail, 
-  updateUserProfile,
-  saveUserToStorage,
-  removeUserFromStorage
-} from '../services/supabase';
+import { localAuthService, LocalUser } from '../services/localAuth';
 import { handleError } from '../utils/errorHandler';
-import { AuthResponse } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  user: any;
-  signIn: (email: string, password: string) => Promise<AuthResponse>;
-  signOut: () => Promise<any>;
-  updateUser: (userId: string, updates: { name?: string; avatar_url?: string }) => Promise<any>;
+  user: LocalUser | null;
+  signIn: (email: string, password: string) => Promise<{ data: { user: LocalUser } | null; error: Error | null }>;
+  signOut: () => Promise<void>;
+  updateUser: (userId: string, updates: { name?: string; avatar_url?: string }) => Promise<LocalUser | null>;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,9 +24,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await new Promise(resolve => setTimeout(resolve, 100));
       
       try {
-        const currentUser = await getCurrentUser();
-        console.log('👤 Usuário atual definido:', currentUser?.id || 'null');
-        setUser(currentUser);
+        // Verificar se há um usuário salvo no localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          console.log('👤 Usuário atual definido:', parsedUser?.id || 'null');
+          setUser(parsedUser);
+        } else {
+          console.log('ℹ️ Nenhum usuário encontrado no localStorage');
+          setUser(null);
+        }
       } catch (error: any) {
         console.error('❌ Erro ao verificar usuário:', error);
         // Em caso de erro, garantir que o usuário seja definido como null
@@ -46,51 +45,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     checkUser();
-    
-    // Listener para mudanças no estado de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        console.log('🔄 Estado de autenticação mudou:', _event, session?.user?.id || 'null');
-        setUser(session?.user || null);
-        setLoading(false);
-      }
-    );
-    
-    // Cleanup listener on unmount
-    return () => {
-      console.log('🧹 Limpando listener de autenticação');
-      subscription.unsubscribe();
-    };
   }, []);
   
   const signIn = async (email: string, password: string) => {
     try {
       console.log('🔐 Tentando login:', email);
-      const result = await signInWithEmail(email, password);
+      const user = await localAuthService.login(email, password);
       
-      if (result.data?.user) {
-        console.log('✅ Login bem-sucedido:', result.data.user.id);
-        setUser(result.data.user);
-        // O usuário já foi salvo no localStorage pela função signInWithEmail
+      if (user) {
+        console.log('✅ Login bem-sucedido:', user.id);
+        setUser(user);
+        // Salvar usuário no localStorage para persistência
+        localStorage.setItem('user', JSON.stringify(user));
+        return { data: { user }, error: null };
+      } else {
+        return { data: null, error: new Error('Credenciais inválidas') };
       }
-      
-      return result;
     } catch (error: any) {
       console.error('❌ Erro no login:', error);
-      throw error;
+      return { data: null, error };
     }
   };
 
   const signOut = async () => {
     try {
       console.log('🚪 Realizando logout');
-      await supabase.auth.signOut();
       setUser(null);
       // Remover usuário do localStorage
-      removeUserFromStorage();
+      localStorage.removeItem('user');
       console.log('✅ Logout concluído');
-      
-      return { error: null };
     } catch (error: any) {
       console.error('❌ Erro no logout:', error);
       handleError(error, 'auth', true);
@@ -100,20 +83,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateUser = async (userId: string, updates: { name?: string; avatar_url?: string }) => {
     try {
-      const result = await updateUserProfile(userId, updates);
+      const updatedUser = await localAuthService.updateUserProfile(userId, updates);
       
       // Atualizar o usuário no estado se for o usuário atual
       if (user && user.id === userId) {
-        setUser({
+        const newUser = {
           ...user,
-          user_metadata: {
-            ...user.user_metadata,
-            ...updates
-          }
-        });
+          ...updates
+        };
+        setUser(newUser);
+        // Atualizar no localStorage
+        localStorage.setItem('user', JSON.stringify(newUser));
       }
       
-      return result;
+      return updatedUser;
     } catch (error: any) {
       handleError(error, 'auth', true);
       throw error;

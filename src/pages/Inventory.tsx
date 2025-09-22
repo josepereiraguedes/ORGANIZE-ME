@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
-import { useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
+import { useLocalDatabase } from '../contexts/LocalDatabaseContext';
 import { handleError } from '../utils/errorHandler';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const Inventory: React.FC = () => {
-  const { products, deleteProduct } = useSupabaseDatabase();
+  const { products, deleteProduct } = useLocalDatabase();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
@@ -83,7 +83,7 @@ const Inventory: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col"
+
           >
             <div className="relative">
               {product.image ? (

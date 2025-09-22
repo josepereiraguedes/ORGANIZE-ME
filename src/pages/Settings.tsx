@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Save, Upload, Building, Palette, User } from 'lucide-react';
+import { Save, Upload, Building, Palette, User, Database, Download } from 'lucide-react';
 import { useConfig } from '../contexts/ConfigContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, HTMLMotionProps } from 'framer-motion';
 import toast from 'react-hot-toast';
+import DataExportImport from '../components/DataExportImport';
 
 const Settings: React.FC = () => {
   const { company, updateCompany } = useConfig();
@@ -156,11 +157,28 @@ const Settings: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Company Settings */}
+      {/* Data Export/Import */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
+      >
+        <div className="flex items-center mb-6">
+          <Database className="w-6 h-6 text-green-600 mr-3" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Compartilhamento de Dados
+          </h2>
+        </div>
+        
+        <DataExportImport />
+      </motion.div>
+
+      {/* Company Settings */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
         {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
       >
         <div className="flex items-center mb-6">
@@ -229,7 +247,7 @@ const Settings: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.3 }}
         {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
       >
         <div className="flex items-center mb-6">
@@ -279,7 +297,7 @@ const Settings: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.4 }}
         {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
       >
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
@@ -304,7 +322,7 @@ const Settings: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.5 }}
         {...({ className: "bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6" } as HTMLMotionProps<'div'>)}
       >
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">

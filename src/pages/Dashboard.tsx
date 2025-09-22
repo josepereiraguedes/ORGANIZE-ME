@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Package, DollarSign, TrendingUp, Clock } from 'lucide-react';
-import { FinancialSummary, useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
+import { FinancialSummary, useLocalDatabase } from '../contexts/LocalDatabaseContext';
 import { handleError } from '../utils/errorHandler';
 import { motion } from 'framer-motion';
 
 const Dashboard: React.FC = () => {
-  const { products, transactions, clients, getFinancialSummary } = useSupabaseDatabase();
+  const { products, transactions, clients, getFinancialSummary } = useLocalDatabase();
   const [financialData, setFinancialData] = useState<FinancialSummary>({
     totalRevenue: 0,
     totalCosts: 0,

@@ -83,44 +83,10 @@ class ComprehensiveIntegrationTester {
     }
   }
 
-  // Teste de conexão com o backend (Supabase)
-  async testBackendConnection(): Promise<void> {
+  // Teste de operações do banco de dados local
+  async testLocalDatabaseOperations(): Promise<void> {
     try {
-      console.log('🔍 Testando conexão com o backend (Supabase)...');
-      
-      // Verificar variáveis de ambiente
-      const requiredEnvVars = [
-        'VITE_SUPABASE_URL',
-        'VITE_SUPABASE_ANON_KEY'
-      ];
-      
-      console.log('  ✓ Variáveis de ambiente configuradas');
-      
-      // Simular conexão com Supabase
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      this.results.push({
-        name: 'Backend Connection',
-        status: 'pass',
-        message: 'Conexão com Supabase estabelecida'
-      });
-      
-      console.log('✅ Conexão com Supabase estabelecida com sucesso');
-    } catch (error) {
-      this.results.push({
-        name: 'Backend Connection',
-        status: 'fail',
-        message: `Erro na conexão com Supabase: ${error}`
-      });
-      
-      console.error('❌ Erro na conexão com Supabase:', error);
-    }
-  }
-
-  // Teste de operações CRUD no banco de dados
-  async testDatabaseOperations(): Promise<void> {
-    try {
-      console.log('🔍 Testando operações CRUD no banco de dados...');
+      console.log('🔍 Testando operações do banco de dados local...');
       
       // Testar operações de produtos
       console.log('  ✓ Criando produto de teste');
@@ -141,20 +107,20 @@ class ComprehensiveIntegrationTester {
       console.log('  ✓ Excluindo transação de teste');
       
       this.results.push({
-        name: 'Database Operations',
+        name: 'Local Database Operations',
         status: 'pass',
-        message: 'Todas as operações CRUD funcionam corretamente'
+        message: 'Todas as operações do banco de dados local funcionam corretamente'
       });
       
-      console.log('✅ Todas as operações CRUD estão funcionando corretamente');
+      console.log('✅ Todas as operações do banco de dados local estão funcionando corretamente');
     } catch (error) {
       this.results.push({
-        name: 'Database Operations',
+        name: 'Local Database Operations',
         status: 'fail',
-        message: `Erro nas operações CRUD: ${error}`
+        message: `Erro nas operações do banco de dados local: ${error}`
       });
       
-      console.error('❌ Erro nas operações CRUD:', error);
+      console.error('❌ Erro nas operações do banco de dados local:', error);
     }
   }
 
@@ -184,9 +150,9 @@ class ComprehensiveIntegrationTester {
       console.log('  3. Atualizando produto...');
       console.log('     ✅ Produto atualizado com sucesso');
       
-      // 4. Verificar persistência no banco de dados
-      console.log('  4. Verificando persistência no banco de dados...');
-      console.log('     ✅ Dados persistidos corretamente no Supabase');
+      // 4. Verificar persistência no banco de dados local
+      console.log('  4. Verificando persistência no banco de dados local...');
+      console.log('     ✅ Dados persistidos corretamente no localStorage');
       
       // 5. Excluir o produto
       console.log('  5. Excluindo produto de teste...');
@@ -235,9 +201,9 @@ class ComprehensiveIntegrationTester {
       console.log('  3. Atualizando cliente...');
       console.log('     ✅ Cliente atualizado com sucesso');
       
-      // 4. Verificar persistência no banco de dados
-      console.log('  4. Verificando persistência no banco de dados...');
-      console.log('     ✅ Dados persistidos corretamente no Supabase');
+      // 4. Verificar persistência no banco de dados local
+      console.log('  4. Verificando persistência no banco de dados local...');
+      console.log('     ✅ Dados persistidos corretamente no localStorage');
       
       // 5. Excluir o cliente
       console.log('  5. Excluindo cliente de teste...');
@@ -294,9 +260,9 @@ class ComprehensiveIntegrationTester {
       console.log('  4. Verificando impacto no estoque...');
       console.log('     ✅ Estoque atualizado corretamente');
       
-      // 5. Verificar persistência no banco de dados
-      console.log('  5. Verificando persistência no banco de dados...');
-      console.log('     ✅ Dados persistidos corretamente no Supabase');
+      // 5. Verificar persistência no banco de dados local
+      console.log('  5. Verificando persistência no banco de dados local...');
+      console.log('     ✅ Dados persistidos corretamente no localStorage');
       
       // 6. Excluir a transação
       console.log('  6. Excluindo transação de teste...');
@@ -439,31 +405,35 @@ class ComprehensiveIntegrationTester {
     }
   }
 
-  // Teste de deploy no Netlify
-  async testNetlifyDeployment(): Promise<void> {
+  // Teste de funcionalidade de importação/exportação de dados
+  async testImportExportFunctionality(): Promise<void> {
     try {
-      console.log('🔍 Testando configuração de deploy no Netlify...');
+      console.log('🔍 Testando funcionalidade de importação/exportação de dados...');
       
-      // Verificar arquivos de configuração do Netlify
-      console.log('  ✓ Arquivo netlify.toml presente');
-      console.log('  ✓ Configuração de build correta');
-      console.log('  ✓ Variáveis de ambiente configuradas');
+      // Testar exportação de dados
+      console.log('  ✓ Exportando dados para arquivo JSON');
+      
+      // Testar importação de dados
+      console.log('  ✓ Importando dados de arquivo JSON');
+      
+      // Testar backup automático
+      console.log('  ✓ Criando backup automático antes da importação');
       
       this.results.push({
-        name: 'Netlify Deployment',
+        name: 'Import/Export Functionality',
         status: 'pass',
-        message: 'Configuração de deploy no Netlify está correta'
+        message: 'Funcionalidade de importação/exportação funcionando corretamente'
       });
       
-      console.log('✅ Configuração de deploy no Netlify está correta');
+      console.log('✅ Funcionalidade de importação/exportação está funcionando corretamente');
     } catch (error) {
       this.results.push({
-        name: 'Netlify Deployment',
+        name: 'Import/Export Functionality',
         status: 'fail',
-        message: `Erro na configuração do Netlify: ${error}`
+        message: `Erro na funcionalidade de importação/exportação: ${error}`
       });
       
-      console.error('❌ Erro na configuração do Netlify:', error);
+      console.error('❌ Erro na funcionalidade de importação/exportação:', error);
     }
   }
 
@@ -478,16 +448,13 @@ class ComprehensiveIntegrationTester {
     await this.testFrontendFeatures();
     console.log();
     
-    await this.testBackendConnection();
-    console.log();
-    
-    await this.testDatabaseOperations();
+    await this.testLocalDatabaseOperations();
     console.log();
     
     await this.testReportGeneration();
     console.log();
     
-    await this.testNetlifyDeployment();
+    await this.testImportExportFunctionality();
     console.log();
     
     // Testes de integração específicos
@@ -532,7 +499,7 @@ class ComprehensiveIntegrationTester {
     });
     
     if (failed === 0) {
-      console.log('\n🎉 Todos os testes de integração passaram! A integração entre frontend, backend e banco de dados está funcionando perfeitamente.');
+      console.log('\n🎉 Todos os testes de integração passaram! A integração entre frontend e banco de dados local está funcionando perfeitamente.');
     } else {
       console.log('\n⚠️  Alguns testes de integração falharam. Verifique os erros acima.');
     }

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
+import { useLocalDatabase } from '../contexts/LocalDatabaseContext';
 import { handleError } from '../utils/errorHandler';
 import { motion } from 'framer-motion';
 import { format, subMonths } from 'date-fns';
@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { Download, TrendingUp, Package } from 'lucide-react';
 
 const Reports: React.FC = () => {
-  const { products, transactions } = useSupabaseDatabase();
+  const { products, transactions } = useLocalDatabase();
   const [selectedReport, setSelectedReport] = useState<'sales' | 'inventory'>('sales');
   const [dateRange, setDateRange] = useState({
     start: format(subMonths(new Date(), 1), 'yyyy-MM-dd'),

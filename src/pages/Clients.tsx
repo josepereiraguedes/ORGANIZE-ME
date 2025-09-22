@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Users, Mail, Phone, MapPin } from 'lucide-react';
-import { useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
+import { useLocalDatabase } from '../contexts/LocalDatabaseContext';
 import { handleError } from '../utils/errorHandler';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
 const Clients: React.FC = () => {
-  const { clients, deleteClient } = useSupabaseDatabase();
+  const { clients, deleteClient } = useLocalDatabase();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredClients = useMemo(() => {
@@ -66,7 +66,7 @@ const Clients: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col"
+
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center">

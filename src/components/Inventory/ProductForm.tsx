@@ -1,253 +1,235 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { ArrowLeft, Save, X } from 'lucide-react';
-import { useSupabaseDatabase } from '../../contexts/SupabaseDatabaseContext';
-import { handleError } from '../../utils/errorHandler';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLocalDatabase } from '../../contexts/LocalDatabaseContext';
+import { Product } from '../../contexts/LocalDatabaseContext';
 import toast from 'react-hot-toast';
 
-interface ProductFormData {
-  name: string;
-  category: string;
-  cost: number;
-  sale_price: number;
-  quantity: number;
-  supplier: string;
-  min_stock: number;
-  image?: string;
+interface ProductFormProps {
+  product?: Product;
 }
 
-const ProductForm: React.FC = () => {
+const ProductForm: React.FC<ProductFormProps> = ({ product }) => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { products, addProduct, updateProduct } = useSupabaseDatabase();
-  const [isLoading, setIsLoading] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
-  
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProductFormData>();
-
-  const isEditing = Boolean(id);
-  const product = isEditing ? products.find(p => p.id === Number(id)) : null;
+  const { user } = useAuth();
+  const { products, addProduct, updateProduct } = useLocalDatabase();
+  const [formData, setFormData] = useState({
+    name: '',
+    category: '',
+    cost: 0,
+    sale_price: 0,
+    quantity: 0,
+    supplier: '',
+    min_stock: 0
+  });
 
   useEffect(() => {
-    if (isEditing && product) {
-      setValue('name', product.name);
-      setValue('category', product.category);
-      setValue('cost', product.cost);
-      setValue('sale_price', product.sale_price);
-      setValue('quantity', product.quantity);
-      setValue('supplier', product.supplier);
-      setValue('min_stock', product.min_stock);
-      setValue('image', product.image);
-      if (product.image) {
-        setImagePreview(product.image);
+    if (product) {
+      setFormData({
+        name: product.name,
+        category: product.category,
+        cost: product.cost,
+        sale_price: product.sale_price,
+        quantity: product.quantity,
+        supplier: product.supplier,
+        min_stock: product.min_stock
+      });
+    } else if (id) {
+      const existingProduct = products.find(p => p.id === parseInt(id));
+      if (existingProduct) {
+        setFormData({
+          name: existingProduct.name,
+          category: existingProduct.category,
+          cost: existingProduct.cost,
+          sale_price: existingProduct.sale_price,
+          quantity: existingProduct.quantity,
+          supplier: existingProduct.supplier,
+          min_stock: existingProduct.min_stock
+        });
       }
     }
-  }, [isEditing, product, setValue]);
+  }, [product, id, products]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        toast.error('A imagem não pode ser maior que 2MB.');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user) {
+      toast.error('Você precisa estar logado para salvar um produto');
+      return;
+    }
+
+    try {
+      // Validar dados obrigatórios
+      if (!formData.name.trim()) {
+        toast.error('O nome do produto é obrigatório');
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setValue('image', result);
-        setImagePreview(result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+      
+      if (formData.cost < 0) {
+        toast.error('O custo não pode ser negativo');
+        return;
+      }
+      
+      if (formData.sale_price < 0) {
+        toast.error('O preço de venda não pode ser negativo');
+        return;
+      }
+      
+      if (formData.quantity < 0) {
+        toast.error('A quantidade não pode ser negativa');
+        return;
+      }
+      
+      if (formData.min_stock < 0) {
+        toast.error('O estoque mínimo não pode ser negativo');
+        return;
+      }
 
-  const removeImage = () => {
-    setValue('image', undefined);
-    setImagePreview(undefined);
-  };
-
-  const onSubmit = async (data: ProductFormData) => {
-    setIsLoading(true);
-    try {
-      const productData = {
-        ...data,
-        image: imagePreview
-      };
-
-      if (isEditing && product) {
-        await updateProduct(product.id!, productData);
+      if (product || id) {
+        // Atualizar produto existente
+        const productId = product?.id || parseInt(id || '0');
+        await updateProduct(productId, formData);
         toast.success('Produto atualizado com sucesso!');
       } else {
-        await addProduct(productData);
+        // Criar novo produto
+        await addProduct(formData);
         toast.success('Produto adicionado com sucesso!');
       }
       navigate('/inventory');
     } catch (error) {
-      handleError(error, 'productForm');
-      toast.error('Erro ao salvar produto. Por favor, tente novamente.');
-    } finally {
-      setIsLoading(false);
+      console.error('Erro ao salvar produto:', error);
+      toast.error('Erro ao salvar produto');
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <button
-          onClick={() => navigate('/inventory')}
-          className="p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 rounded-lg transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          {isEditing ? 'Editar Produto' : 'Novo Produto'}
-        </h1>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Form Fields */}
-            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nome do Produto *
-                </label>
-                <input
-                  {...register('name', { required: 'Nome é obrigatório' })}
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Digite o nome do produto"
-                />
-                {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Categoria *
-                </label>
-                <input
-                  {...register('category', { required: 'Categoria é obrigatória' })}
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Ex: Eletrônicos, Roupas, etc."
-                />
-                {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Custo (R$) *
-                </label>
-                <input
-                  {...register('cost', { required: 'Custo é obrigatório', valueAsNumber: true, min: { value: 0.01, message: 'Custo deve ser maior que zero' } })}
-                  type="number" step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="0.00"
-                />
-                {errors.cost && <p className="mt-1 text-sm text-red-600">{errors.cost.message}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Preço de Venda (R$) *
-                </label>
-                <input
-                  {...register('sale_price', { required: 'Preço de venda é obrigatório', valueAsNumber: true, min: { value: 0.01, message: 'Preço deve ser maior que zero' } })}
-                  type="number" step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="0.00"
-                />
-                {errors.sale_price && <p className="mt-1 text-sm text-red-600">{errors.sale_price.message}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Quantidade em Estoque *
-                </label>
-                <input
-                  {...register('quantity', { required: 'Quantidade é obrigatória', valueAsNumber: true, min: { value: 0, message: 'Quantidade não pode ser negativa' } })}
-                  type="number"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="0"
-                />
-                {errors.quantity && <p className="mt-1 text-sm text-red-600">{errors.quantity.message}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Fornecedor *
-                </label>
-                <input
-                  {...register('supplier', { required: 'Fornecedor é obrigatório' })}
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Nome do fornecedor"
-                />
-                {errors.supplier && <p className="mt-1 text-sm text-red-600">{errors.supplier.message}</p>}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Estoque Mínimo *
-                </label>
-                <input
-                  {...register('min_stock', { required: 'Estoque mínimo é obrigatório', valueAsNumber: true, min: { value: 0, message: 'Estoque mínimo não pode ser negativo' } })}
-                  type="number"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="0"
-                />
-                {errors.min_stock && <p className="mt-1 text-sm text-red-600">{errors.min_stock.message}</p>}
-              </div>
-            </div>
-
-            {/* Image Upload */}
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Imagem do Produto
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+        {product || id ? 'Editar Produto' : 'Novo Produto'}
+      </h1>
+      
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Nome *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="Nome do produto"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Categoria
+            </label>
+            <input
+              type="text"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="Categoria do produto"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Custo (R$) *
               </label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                  {imagePreview ? (
-                    <div className="relative group">
-                      <img src={imagePreview} alt="Preview" className="mx-auto h-32 w-32 object-cover rounded-md" />
-                      <div 
-                        onClick={removeImage}
-                        className="absolute top-0 right-0 p-1 bg-red-600 rounded-full text-white cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X size={16} />
-                      </div>
-                    </div>
-                  ) : (
-                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                  <div className="flex text-sm text-gray-600 dark:text-gray-400">
-                    <label htmlFor="file-upload" className="relative cursor-pointer bg-white dark:bg-gray-700 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                      <span>Carregar um arquivo</span>
-                      <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/png, image/jpeg, image/webp" onChange={handleImageUpload} />
-                    </label>
-                    <p className="pl-1">ou arraste e solte</p>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">PNG, JPG, WEBP até 2MB</p>
-                </div>
-              </div>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.cost}
+                onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="0.00"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Preço de Venda (R$) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.sale_price}
+                onChange={(e) => setFormData({ ...formData, sale_price: Number(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="0.00"
+              />
             </div>
           </div>
-
-          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <button type="button" onClick={() => navigate('/inventory')} className="px-6 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={isLoading} className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-              <Save className="w-5 h-5 mr-2" />
-              {isLoading ? 'Salvando...' : 'Salvar Produto'}
-            </button>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Quantidade em Estoque *
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="0"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Estoque Mínimo
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.min_stock}
+                onChange={(e) => setFormData({ ...formData, min_stock: Number(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="0"
+              />
+            </div>
           </div>
-        </form>
-      </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Fornecedor
+            </label>
+            <input
+              type="text"
+              value={formData.supplier}
+              onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="Nome do fornecedor"
+            />
+          </div>
+        </div>
+        
+        <div className="flex justify-end space-x-3 mt-6">
+          <button
+            type="button"
+            onClick={() => navigate('/inventory')}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Salvar Produto
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

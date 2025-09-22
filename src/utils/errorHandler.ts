@@ -154,8 +154,6 @@ const getUserFriendlyMessage = (error: AppError): string => {
   // Check for specific error codes or patterns
   if (error.code) {
     switch (error.code) {
-      case 'PGRST301':
-        return 'Não foi possível conectar ao banco de dados. Verifique sua conexão.';
       case '404':
         return 'Recurso não encontrado.';
       case '401':
@@ -167,7 +165,7 @@ const getUserFriendlyMessage = (error: AppError): string => {
 
   // Check for specific error types
   if (error instanceof DatabaseError) {
-    return 'Ocorreu um erro no banco de dados. Por favor, tente novamente.';
+    return 'Ocorreu um erro no banco de dados local. Por favor, tente novamente.';
   }
 
   if (error instanceof NetworkError) {
@@ -191,6 +189,8 @@ const getUserFriendlyMessage = (error: AppError): string => {
         return 'Erro de autenticação. Por favor, faça login novamente.';
       case 'network':
         return 'Erro de conexão. Por favor, verifique sua internet e tente novamente.';
+      case 'localstorage':
+        return 'Erro ao acessar o armazenamento local. Por favor, verifique as permissões do navegador.';
       default:
         return 'Ocorreu um erro inesperado. Por favor, tente novamente.';
     }
@@ -198,36 +198,6 @@ const getUserFriendlyMessage = (error: AppError): string => {
 
   // Default message
   return 'Ocorreu um erro. Por favor, tente novamente.';
-};
-
-/**
- * Handle Supabase errors specifically
- * @param error - The Supabase error to handle
- * @param context - Optional context where the error occurred
- * @param showToast - Whether to show a toast notification (default: true)
- * @returns The normalized DatabaseError
- */
-export const handleSupabaseError = (
-  error: unknown,
-  context?: string,
-  showToast: boolean = true
-): DatabaseError => {
-  let message = 'Erro desconhecido no banco de dados.';
-  let code: string | undefined;
-
-  if (error && typeof error === 'object' && error !== null) {
-    if ('message' in error && typeof error.message === 'string') {
-      message = error.message;
-    }
-    if ('code' in error && typeof error.code === 'string') {
-      code = error.code;
-    }
-  } else {
-    message = String(error);
-  }
-
-  const dbError = new DatabaseError(message, code, context, error instanceof Error ? error : undefined);
-  return handleError(dbError, context, showToast) as DatabaseError;
 };
 
 /**
@@ -245,7 +215,6 @@ export const createValidationError = (
 
 export default {
   handleError,
-  handleSupabaseError,
   createValidationError,
   AppError,
   DatabaseError,

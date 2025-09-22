@@ -1,19 +1,4 @@
 import React, { createContext, useEffect, useState, useCallback } from 'react';
-import { 
-  supabase, 
-  getProducts, 
-  addProduct as addProductService, 
-  updateProduct as updateProductService, 
-  deleteProduct as deleteProductService,
-  getClients,
-  addClient as addClientService,
-  updateClient as updateClientService,
-  deleteClient as deleteClientService,
-  getTransactions,
-  addTransaction as addTransactionService,
-  updateTransactionStatus as updateTransactionStatusService,
-  getFinancialSummary as getFinancialSummaryService
-} from '../services/supabase';
 import toast from 'react-hot-toast';
 import { useAuth } from './AuthContext';
 
@@ -43,7 +28,7 @@ export interface Product {
   created_at: string;
   /** Last update timestamp */
   updated_at: string;
-  /** User ID for RLS */
+  /** User ID for data isolation */
   user_id?: string;
 }
 
@@ -65,7 +50,7 @@ export interface Client {
   created_at: string;
   /** Last update timestamp */
   updated_at: string;
-  /** User ID for RLS */
+  /** User ID for data isolation */
   user_id?: string;
 }
 
@@ -93,7 +78,7 @@ export interface Transaction {
   description?: string;
   /** Creation timestamp */
   created_at: string;
-  /** User ID for RLS */
+  /** User ID for data isolation */
   user_id?: string;
   /** Product details (for display) */
   product?: {
@@ -122,9 +107,9 @@ export interface FinancialSummary {
 }
 
 /**
- * Context type for the Supabase database operations
+ * Context type for the local database operations
  */
-interface SupabaseDatabaseContextType {
+interface LocalDatabaseContextType {
   /** Array of all products */
   products: Product[];
   /** Array of all clients */
@@ -155,13 +140,13 @@ interface SupabaseDatabaseContextType {
   loading: boolean;
 }
 
-const SupabaseDatabaseContext = createContext<SupabaseDatabaseContextType | undefined>(undefined);
+const LocalDatabaseContext = createContext<LocalDatabaseContextType | undefined>(undefined);
 
 /**
- * Provider component for the Supabase database context
+ * Provider component for the local database context
  * @param children - Child components that will have access to the context
  */
-export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const LocalDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -184,7 +169,31 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
   }, [user]);
 
   /**
-   * Refresh all data from Supabase
+   * Get data from localStorage with fallback to default value
+   */
+  const getFromLocalStorage = useCallback(function<T>(key: string, defaultValue: T): T {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+      console.error(`Erro ao obter ${key} do localStorage:`, error);
+      return defaultValue;
+    }
+  }, []);
+
+  /**
+   * Save data to localStorage
+   */
+  const saveToLocalStorage = useCallback(function<T>(key: string, value: T): void {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error(`Erro ao salvar ${key} no localStorage:`, error);
+    }
+  }, []);
+
+  /**
+   * Refresh all data from localStorage
    */
   const refreshData = useCallback(async () => {
     // Verificar se há um usuário autenticado
@@ -199,16 +208,14 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
     
     setLoading(true);
     try {
-      // Carregar dados do Supabase em paralelo
-      const [productsData, clientsData, transactionsData] = await Promise.all([
-        getProducts(userId),
-        getClients(userId),
-        getTransactions(userId)
-      ]);
+      // Carregar dados do localStorage
+      const storedProducts = getFromLocalStorage<Product[]>(`products_${userId}`, []);
+      const storedClients = getFromLocalStorage<Client[]>(`clients_${userId}`, []);
+      const storedTransactions = getFromLocalStorage<Transaction[]>(`transactions_${userId}`, []);
       
-      setProducts(productsData || []);
-      setClients(clientsData || []);
-      setTransactions(transactionsData || []);
+      setProducts(storedProducts);
+      setClients(storedClients);
+      setTransactions(storedTransactions);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       // Em caso de erro, usar arrays vazios
@@ -219,7 +226,7 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
     } finally {
       setLoading(false);
     }
-  }, [getCurrentUserId]);
+  }, [getCurrentUserId, getFromLocalStorage]);
 
   // Efeito para carregar dados quando o componente monta ou quando o usuário muda
   useEffect(() => {
@@ -237,11 +244,21 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
         throw new Error('Usuário não autenticado');
       }
       
-      // Adicionar produto no Supabase
-      const newProduct = await addProductService(productData, userId);
+      // Criar novo produto com timestamps
+      const newProduct: Product = {
+        ...productData,
+        id: Date.now(), // Usar timestamp como ID único
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_id: userId
+      };
       
       // Atualizar estado local
-      setProducts(prev => [...prev, newProduct]);
+      const updatedProducts = [...products, newProduct];
+      setProducts(updatedProducts);
+      
+      // Salvar no localStorage
+      saveToLocalStorage(`products_${userId}`, updatedProducts);
       
       toast.success('Produto adicionado com sucesso!');
     } catch (error) {
@@ -262,15 +279,23 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
         throw new Error('Usuário não autenticado');
       }
       
-      // Atualizar produto no Supabase
-      const updatedProduct = await updateProductService(id, productData, userId);
+      // Atualizar produto
+      const updatedProducts = products.map(product => {
+        if (product.id === id) {
+          return {
+            ...product,
+            ...productData,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return product;
+      });
       
       // Atualizar estado local
-      setProducts(prev => 
-        prev.map(product => 
-          product.id === id ? updatedProduct : product
-        )
-      );
+      setProducts(updatedProducts);
+      
+      // Salvar no localStorage
+      saveToLocalStorage(`products_${userId}`, updatedProducts);
       
       toast.success('Produto atualizado com sucesso!');
     } catch (error) {
@@ -291,11 +316,14 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
         throw new Error('Usuário não autenticado');
       }
       
-      // Excluir produto no Supabase
-      await deleteProductService(id, userId);
+      // Excluir produto
+      const updatedProducts = products.filter(product => product.id !== id);
       
       // Atualizar estado local
-      setProducts(prev => prev.filter(product => product.id !== id));
+      setProducts(updatedProducts);
+      
+      // Salvar no localStorage
+      saveToLocalStorage(`products_${userId}`, updatedProducts);
       
       toast.success('Produto excluído com sucesso!');
     } catch (error) {
@@ -316,11 +344,21 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
         throw new Error('Usuário não autenticado');
       }
       
-      // Adicionar cliente no Supabase
-      const newClient = await addClientService(clientData, userId);
+      // Criar novo cliente com timestamps
+      const newClient: Client = {
+        ...clientData,
+        id: Date.now(), // Usar timestamp como ID único
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_id: userId
+      };
       
       // Atualizar estado local
-      setClients(prev => [...prev, newClient]);
+      const updatedClients = [...clients, newClient];
+      setClients(updatedClients);
+      
+      // Salvar no localStorage
+      saveToLocalStorage(`clients_${userId}`, updatedClients);
       
       toast.success('Cliente adicionado com sucesso!');
     } catch (error) {
@@ -341,15 +379,23 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
         throw new Error('Usuário não autenticado');
       }
       
-      // Atualizar cliente no Supabase
-      const updatedClient = await updateClientService(id, clientData, userId);
+      // Atualizar cliente
+      const updatedClients = clients.map(client => {
+        if (client.id === id) {
+          return {
+            ...client,
+            ...clientData,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return client;
+      });
       
       // Atualizar estado local
-      setClients(prev => 
-        prev.map(client => 
-          client.id === id ? updatedClient : client
-        )
-      );
+      setClients(updatedClients);
+      
+      // Salvar no localStorage
+      saveToLocalStorage(`clients_${userId}`, updatedClients);
       
       toast.success('Cliente atualizado com sucesso!');
     } catch (error) {
@@ -370,11 +416,14 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
         throw new Error('Usuário não autenticado');
       }
       
-      // Excluir cliente no Supabase
-      await deleteClientService(id, userId);
+      // Excluir cliente
+      const updatedClients = clients.filter(client => client.id !== id);
       
       // Atualizar estado local
-      setClients(prev => prev.filter(client => client.id !== id));
+      setClients(updatedClients);
+      
+      // Salvar no localStorage
+      saveToLocalStorage(`clients_${userId}`, updatedClients);
       
       toast.success('Cliente excluído com sucesso!');
     } catch (error) {
@@ -395,29 +444,40 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
         throw new Error('Usuário não autenticado');
       }
       
-      // Adicionar transação no Supabase
-      const newTransaction = await addTransactionService(transactionData, userId);
+      // Criar nova transação com timestamps
+      const newTransaction: Transaction = {
+        ...transactionData,
+        id: Date.now(), // Usar timestamp como ID único
+        created_at: new Date().toISOString(),
+        user_id: userId
+      };
       
       // Atualizar estado local
-      setTransactions(prev => [newTransaction, ...prev]);
+      const updatedTransactions = [newTransaction, ...transactions];
+      setTransactions(updatedTransactions);
       
-      // Atualizar estoque do produto
-      setProducts(prev => 
-        prev.map(product => {
+      // Salvar no localStorage
+      saveToLocalStorage(`transactions_${userId}`, updatedTransactions);
+      
+      // Atualizar estoque do produto se for venda ou compra
+      if (transactionData.type === 'sale' || transactionData.type === 'purchase') {
+        const updatedProducts = products.map(product => {
           if (product.id === transactionData.product_id) {
             let newQuantity = product.quantity;
             if (transactionData.type === 'sale') {
               newQuantity -= transactionData.quantity;
             } else if (transactionData.type === 'purchase') {
               newQuantity += transactionData.quantity;
-            } else if (transactionData.type === 'adjustment') {
-              newQuantity = transactionData.quantity;
             }
-            return { ...product, quantity: newQuantity };
+            return { ...product, quantity: newQuantity, updated_at: new Date().toISOString() };
           }
           return product;
-        })
-      );
+        });
+        
+        // Atualizar produtos
+        setProducts(updatedProducts);
+        saveToLocalStorage(`products_${userId}`, updatedProducts);
+      }
       
       toast.success('Transação registrada com sucesso!');
     } catch (error) {
@@ -438,15 +498,23 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
         throw new Error('Usuário não autenticado');
       }
       
-      // Atualizar status da transação no Supabase
-      const updatedTransaction = await updateTransactionStatusService(id, status, userId);
+      // Atualizar status da transação
+      const updatedTransactions = transactions.map(transaction => {
+        if (transaction.id === id) {
+          return {
+            ...transaction,
+            payment_status: status,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return transaction;
+      });
       
       // Atualizar estado local
-      setTransactions(prev => 
-        prev.map(transaction => 
-          transaction.id === id ? updatedTransaction : transaction
-        )
-      );
+      setTransactions(updatedTransactions);
+      
+      // Salvar no localStorage
+      saveToLocalStorage(`transactions_${userId}`, updatedTransactions);
       
       toast.success('Status da transação atualizado com sucesso!');
     } catch (error) {
@@ -461,20 +529,39 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
    */
   const getFinancialSummary = async (startDate?: Date, endDate?: Date): Promise<FinancialSummary> => {
     try {
-      // Obter o ID do usuário logado
-      const userId = getCurrentUserId();
-      if (!userId) {
-        throw new Error('Usuário não autenticado');
+      // Filtrar transações por data se necessário
+      let filteredTransactions = transactions;
+      
+      if (startDate) {
+        filteredTransactions = filteredTransactions.filter(t => 
+          new Date(t.created_at) >= startDate
+        );
       }
       
-      // Converter datas para strings no formato ISO
-      const startDateStr = startDate ? startDate.toISOString() : undefined;
-      const endDateStr = endDate ? endDate.toISOString() : undefined;
+      if (endDate) {
+        filteredTransactions = filteredTransactions.filter(t => 
+          new Date(t.created_at) <= endDate
+        );
+      }
       
-      // Obter resumo financeiro do Supabase
-      const summary = await getFinancialSummaryService(userId, startDateStr, endDateStr);
+      const paidSales = filteredTransactions.filter(t => t.type === 'sale' && t.payment_status === 'paid');
+      const pendingSales = filteredTransactions.filter(t => t.type === 'sale' && t.payment_status === 'pending');
+      const purchases = filteredTransactions.filter(t => t.type === 'purchase');
       
-      return summary;
+      const totalRevenue = paidSales.reduce((sum, t) => sum + (t.total || 0), 0);
+      const pendingReceivables = pendingSales.reduce((sum, t) => sum + (t.total || 0), 0);
+      const totalCosts = purchases.reduce((sum, t) => sum + (t.total || 0), 0);
+      
+      const profit = totalRevenue - totalCosts;
+      const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+      
+      return {
+        totalRevenue,
+        totalCosts,
+        profit,
+        profitMargin,
+        pendingReceivables
+      };
     } catch (error) {
       console.error('Erro ao obter resumo financeiro:', error);
       // Retornar valores padrão em caso de erro
@@ -489,7 +576,7 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
   };
 
   return (
-    <SupabaseDatabaseContext.Provider value={{
+    <LocalDatabaseContext.Provider value={{
       products,
       clients,
       transactions,
@@ -506,21 +593,21 @@ export const SupabaseDatabaseProvider: React.FC<{ children: React.ReactNode }> =
       loading
     }}>
       {children}
-    </SupabaseDatabaseContext.Provider>
+    </LocalDatabaseContext.Provider>
   );
 };
 
 /**
- * Custom hook to use the Supabase database context
- * @returns Supabase database context
- * @throws Error if used outside of SupabaseDatabaseProvider
+ * Custom hook to use the local database context
+ * @returns Local database context
+ * @throws Error if used outside of LocalDatabaseProvider
  */
-export const useSupabaseDatabase = () => {
-  const context = React.useContext(SupabaseDatabaseContext);
+export const useLocalDatabase = () => {
+  const context = React.useContext(LocalDatabaseContext);
   if (context === undefined) {
-    throw new Error('useSupabaseDatabase must be used within a SupabaseDatabaseProvider');
+    throw new Error('useLocalDatabase must be used within a LocalDatabaseProvider');
   }
   return context;
 };
 
-export default SupabaseDatabaseProvider;
+export default LocalDatabaseProvider;

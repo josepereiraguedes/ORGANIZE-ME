@@ -14,12 +14,10 @@ export const getEnvVar = (name: string): string | undefined => {
   return undefined;
 };
 
-export const getSupabaseConfig = () => {
-  const supabaseUrl = getEnvVar('VITE_SUPABASE_URL');
-  const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY');
+export const getAppConfig = () => {
+  const appTitle = getEnvVar('VITE_APP_TITLE') || 'Sistema de Gestão de Estoque';
   
   return {
-    supabaseUrl,
-    supabaseAnonKey
+    appTitle
   };
 };

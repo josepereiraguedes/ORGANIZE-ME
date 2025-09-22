@@ -10,8 +10,8 @@ tests/
 ├── basic-functionality.test.ts     # Testes básicos de funcionalidade
 ├── crud-operations.test.ts         # Testes das operações CRUD
 ├── export-functionality.test.ts    # Testes de exportação de relatórios
-├── system-test.ts                  # Testes abrangentes do sistema
-├── integration-test.ts             # Testes de integração entre componentes
+├── comprehensive-integration-test.ts # Testes abrangentes do sistema
+├── run-tests.ts                    # Executor de testes
 └── README.md                       # Documentação dos testes
 ```
 
@@ -23,29 +23,16 @@ npm test
 ```
 Verifica as funcionalidades básicas do sistema.
 
-### Testes de Sistema
-```bash
-npm run test:system
-```
-Testa todos os aspectos do sistema, incluindo frontend, backend, banco de dados e deploy.
-
-### Testes de Integração
+### Testes de Integração Abrangentes
 ```bash
 npm run test:integration
 ```
-Verifica a integração entre os componentes do sistema.
+Testa todos os aspectos do sistema, incluindo frontend, armazenamento local e funcionalidades.
 
 ### Executar Todos os Testes
 ```bash
-# No Windows PowerShell
-.\run-all-tests.ps1
+npm test
 ```
-
-## Relatórios de Teste
-
-- `TESTING_SUMMARY.md` - Resumo dos testes realizados
-- `SYSTEM_TEST_REPORT.md` - Relatório detalhado dos testes de sistema
-- `FINAL_TEST_REPORT.md` - Relatório final completo de todos os testes
 
 ## Cobertura de Testes
 
@@ -58,8 +45,7 @@ Os testes cobrem as seguintes áreas:
    - Sistema de notificações
    - Tema claro/escuro
 
-2. **Backend e Banco de Dados**
-   - Conexão com Supabase
+2. **Armazenamento Local**
    - Operações CRUD para produtos
    - Operações CRUD para clientes
    - Operações CRUD para transações
@@ -71,12 +57,7 @@ Os testes cobrem as seguintes áreas:
    - Geração de relatórios em PDF
    - Exportação de dados em CSV
    - Atualização automática de estoque
-
-4. **Infraestrutura**
-   - Configuração do Netlify
-   - Build e deploy
-   - Variáveis de ambiente
-   - Redirecionamentos SPA
+   - Importação e exportação de dados entre dispositivos
 
 ## Como Adicionar Novos Testes
 

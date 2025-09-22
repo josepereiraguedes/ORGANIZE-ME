@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import { useSupabaseDatabase } from '../contexts/SupabaseDatabaseContext';
+import { useLocalDatabase } from '../contexts/LocalDatabaseContext';
 import { motion, HTMLMotionProps } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
 const Sales: React.FC = () => {
-  const { transactions, products, clients, updateTransactionStatus } = useSupabaseDatabase();
+  const { transactions, products, clients, updateTransactionStatus } = useLocalDatabase();
   const [selectedPeriod, setSelectedPeriod] = useState('all');
 
   const handleStatusChange = async (id: number, currentStatus: 'paid' | 'pending') => {

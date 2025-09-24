@@ -10,12 +10,22 @@ const LoginForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('📤 Enviando formulário de login');
     setLoading(true);
     
     try {
-      await signIn(email, password);
+      console.log('🔍 Tentando autenticação com:', { email, password });
+      const result = await signIn(email, password);
+      
+      if (result.error) {
+        console.error('❌ Erro na autenticação:', result.error.message);
+        toast.error(result.error.message || 'Erro na autenticação. Tente novamente.');
+      } else {
+        console.log('🎉 Login bem-sucedido!');
+        toast.success('Login realizado com sucesso!');
+      }
     } catch (error: any) {
-      console.error('Erro na autenticação:', error);
+      console.error('💥 Erro na autenticação:', error);
       if (error.message) {
         toast.error(error.message);
       } else {

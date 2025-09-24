@@ -1,12 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import Sales from './pages/Financial';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Categories from './pages/Categories';
 import ProductForm from './components/Inventory/ProductForm';
 import TransactionForm from './components/Financial/TransactionForm';
 import Clients from './pages/Clients';
@@ -49,6 +49,7 @@ const AppContent: React.FC = () => {
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/inventory/new" element={<ProductForm />} />
             <Route path="/inventory/edit/:id" element={<ProductForm />} />
+            <Route path="/categories" element={<Categories />} />
             <Route path="/sales" element={<Sales />} />
             <Route path="/sales/new" element={<TransactionForm />} />
             <Route path="/clients" element={<Clients />} />
@@ -58,13 +59,6 @@ const AppContent: React.FC = () => {
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </Layout>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            className: 'dark:bg-gray-800 dark:text-white',
-          }}
-        />
       </div>
     </Router>
   );

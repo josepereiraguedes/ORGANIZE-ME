@@ -9,7 +9,9 @@ import {
   Menu,
   Moon,
   Sun,
-  Users
+  Users,
+  User,
+  Tag
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useConfig } from '../../contexts/ConfigContext';
@@ -28,6 +30,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Estoque', href: '/inventory', icon: Package },
+    { name: 'Categorias', href: '/categories', icon: Tag },
     { name: 'Vendas', href: '/sales', icon: DollarSign },
     { name: 'Clientes', href: '/clients', icon: Users },
     { name: 'Relatórios', href: '/reports', icon: FileText },
@@ -84,6 +87,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </NavLink>
             ))}
           </nav>
+
+          {/* User profile and theme toggle at the bottom */}
+          <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="mb-4">
+              <UserProfile />
+            </div>
+            <button
+              onClick={toggleTheme}
+              className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              {theme === 'light' ? (
+                <>
+                  <Moon className="w-5 h-5 mr-3" />
+                  Modo Escuro
+                </>
+              ) : (
+                <>
+                  <Sun className="w-5 h-5 mr-3" />
+                  Modo Claro
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -100,10 +126,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </button>
 
             <div className="flex items-center space-x-4 ml-auto">
-              <UserProfile />
+              {/* Removido UserProfile daqui */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
               >
                 {theme === 'light' ? (
                   <Moon className="w-5 h-5" />

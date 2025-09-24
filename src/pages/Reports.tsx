@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useLocalDatabase } from '../contexts/LocalDatabaseContext';
 import { handleError } from '../utils/errorHandler';
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { format, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
-import { Download, TrendingUp, Package } from 'lucide-react';
+import { Download, TrendingUp, Package, Receipt } from 'lucide-react';
 
 const Reports: React.FC = () => {
   const { products, transactions } = useLocalDatabase();
@@ -46,9 +46,10 @@ const Reports: React.FC = () => {
           };
         }
         
+        const saleCost = sale.quantity * product.cost;
         acc[productId].quantity += sale.quantity;
         acc[productId].revenue += sale.total;
-        acc[productId].cost += sale.quantity * product.cost;
+        acc[productId].cost += saleCost;
         acc[productId].profit = acc[productId].revenue - acc[productId].cost;
         
         return acc;
@@ -130,7 +131,7 @@ const Reports: React.FC = () => {
       // Criar conteúdo HTML para impressão
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
-        toast.error('Por favor, permita popups para imprimir o relatório');
+        toast.error('Permita popups para imprimir');
         return;
       }
       
@@ -151,7 +152,7 @@ const Reports: React.FC = () => {
       
       // Cabeçalhos
       const headers = selectedReport === 'sales'
-        ? ['Produto', 'Qtd Vendida', 'Receita (R$)', 'Lucro (R$)']
+        ? ['Produto', 'Categoria', 'Qtd Vendida', 'Receita (R$)', 'Custo (R$)', 'Lucro (R$)', 'Margem (%)']
         : ['Produto', 'Categoria', 'Estoque', 'Status', 'Valor Custo (R$)'];
       
       headers.forEach(header => {
@@ -163,11 +164,15 @@ const Reports: React.FC = () => {
       currentReportData.forEach(item => {
         tableHTML += '<tr>';
         if (selectedReport === 'sales') {
-          const saleItem = item as {name: string, quantity: number, revenue: number, profit: number};
+          const saleItem = item as {name: string, category: string, quantity: number, revenue: number, cost: number, profit: number};
+          const margin = saleItem.revenue > 0 ? (saleItem.profit / saleItem.revenue) * 100 : 0;
           tableHTML += `<td>${saleItem.name}</td>`;
+          tableHTML += `<td>${saleItem.category}</td>`;
           tableHTML += `<td>${saleItem.quantity}</td>`;
           tableHTML += `<td>R$ ${saleItem.revenue.toFixed(2)}</td>`;
+          tableHTML += `<td>R$ ${saleItem.cost.toFixed(2)}</td>`;
           tableHTML += `<td>R$ ${saleItem.profit.toFixed(2)}</td>`;
+          tableHTML += `<td>${margin.toFixed(1)}%</td>`;
         } else {
           const inventoryItem = item as {name: string, category: string, currentStock: number, status: string, stockValue: number};
           tableHTML += `<td>${inventoryItem.name}</td>`;
@@ -181,14 +186,58 @@ const Reports: React.FC = () => {
       
       // Linha de totais para relatório de vendas
       if (selectedReport === 'sales') {
-        const totalSales = (currentReportData as Array<{revenue: number, profit: number}>).reduce(
-          (acc, item) => ({ revenue: acc.revenue + item.revenue, profit: acc.profit + item.profit }),
-          { revenue: 0, profit: 0 }
+        const totalSales = (currentReportData as Array<{revenue: number, cost: number, profit: number}>).reduce(
+          (acc, item) => ({ revenue: acc.revenue + item.revenue, cost: acc.cost + item.cost, profit: acc.profit + item.profit }),
+          { revenue: 0, cost: 0, profit: 0 }
         );
-        tableHTML += `<tr class="total-row"><td>TOTAL</td><td></td><td>R$ ${totalSales.revenue.toFixed(2)}</td><td>R$ ${totalSales.profit.toFixed(2)}</td></tr>`;
+        const totalMargin = totalSales.revenue > 0 ? (totalSales.profit / totalSales.revenue) * 100 : 0;
+        tableHTML += `<tr class="total-row"><td colspan="2">TOTAL</td><td></td><td>R$ ${totalSales.revenue.toFixed(2)}</td><td>R$ ${totalSales.cost.toFixed(2)}</td><td>R$ ${totalSales.profit.toFixed(2)}</td><td>${totalMargin.toFixed(1)}%</td></tr>`;
       }
       
       tableHTML += '</tbody></table>';
+      
+      // Adicionar tabela de detalhamento de transações para relatório de vendas
+      if (selectedReport === 'sales') {
+        // Filtrar transações de venda pelo período selecionado
+        const startDate = new Date(dateRange.start);
+        const endDate = new Date(dateRange.end);
+        endDate.setHours(23, 59, 59, 999);
+        
+        const salesTransactions = transactions.filter(t => 
+          t.type === 'sale' && 
+          new Date(t.created_at) >= startDate && 
+          new Date(t.created_at) <= endDate
+        );
+        
+        if (salesTransactions.length > 0) {
+          tableHTML += '<h2 style="margin-top: 30px; font-size: 16px;">Detalhamento de Transações</h2>';
+          tableHTML += '<table><thead><tr>';
+          tableHTML += '<th>Data</th><th>Produto</th><th>Qtd</th><th>Receita (R$)</th><th>Custo (R$)</th><th>Lucro (R$)</th><th>Margem (%)</th><th>Status</th>';
+          tableHTML += '</tr></thead><tbody>';
+          
+          salesTransactions.forEach(transaction => {
+            const product = products.find(p => p.id === transaction.product_id);
+            if (product) {
+              const transactionCost = transaction.quantity * product.cost;
+              const transactionProfit = transaction.total - transactionCost;
+              const transactionMargin = transaction.total > 0 ? (transactionProfit / transaction.total) * 100 : 0;
+              
+              tableHTML += '<tr>';
+              tableHTML += `<td>${format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</td>`;
+              tableHTML += `<td>${product.name}</td>`;
+              tableHTML += `<td>${transaction.quantity}</td>`;
+              tableHTML += `<td>R$ ${transaction.total.toFixed(2)}</td>`;
+              tableHTML += `<td>R$ ${transactionCost.toFixed(2)}</td>`;
+              tableHTML += `<td>R$ ${transactionProfit.toFixed(2)}</td>`;
+              tableHTML += `<td>${transactionMargin.toFixed(1)}%</td>`;
+              tableHTML += `<td>${transaction.payment_status === 'paid' ? 'Pago' : 'Pendente'}</td>`;
+              tableHTML += '</tr>';
+            }
+          });
+          
+          tableHTML += '</tbody></table>';
+        }
+      }
       
       // Conteúdo completo da página
       printWindow.document.write(`
@@ -212,41 +261,108 @@ const Reports: React.FC = () => {
       `);
       
       printWindow.document.close();
-      toast.success('Relatório gerado com sucesso!');
+      toast.success('Relatório gerado!');
 
     } catch (error) {
       handleError(error, 'reportsPagePDF');
-      toast.error('Erro ao gerar relatório PDF. Tente novamente.');
+      toast.error('Erro ao gerar relatório');
     }
   };
 
   const exportToCSV = () => {
     try {
       // Implementação segura de exportação CSV sem dependências externas
-      const headers = selectedReport === 'sales' 
-        ? ['Produto', 'Qtd Vendida', 'Receita (R$)', 'Lucro (R$)']
-        : ['Produto', 'Categoria', 'Estoque', 'Status', 'Valor Custo (R$)'];
+      let csvContent = [];
       
-      const csvContent = [
-        headers.join(','),
-        ...currentReportData.map(item => {
-          if (selectedReport === 'sales') {
-            const saleItem = item as {name: string, quantity: number, revenue: number, profit: number};
-            return `"${saleItem.name}",${saleItem.quantity},${saleItem.revenue.toFixed(2)},${saleItem.profit.toFixed(2)}`;
-          } else {
-            const inventoryItem = item as {name: string, category: string, currentStock: number, status: string, stockValue: number};
-            return `"${inventoryItem.name}","${inventoryItem.category}",${inventoryItem.currentStock},"${inventoryItem.status}",${inventoryItem.stockValue.toFixed(2)}`;
-          }
-        })
-      ];
-      
-      // Adicionar linha de totais para relatório de vendas
       if (selectedReport === 'sales') {
-        const totalSales = (currentReportData as Array<{revenue: number, profit: number}>).reduce(
-          (acc, item) => ({ revenue: acc.revenue + item.revenue, profit: acc.profit + item.profit }),
-          { revenue: 0, profit: 0 }
+        // Cabeçalhos para relatório de vendas
+        csvContent.push(['Produto', 'Categoria', 'Qtd Vendida', 'Receita (R$)', 'Custo (R$)', 'Lucro (R$)', 'Margem (%)'].join(','));
+        
+        // Dados agregados
+        currentReportData.forEach(item => {
+          const saleItem = item as {name: string, category: string, quantity: number, revenue: number, cost: number, profit: number};
+          const margin = saleItem.revenue > 0 ? (saleItem.profit / saleItem.revenue) * 100 : 0;
+          csvContent.push([
+            `"${saleItem.name}"`,
+            `"${saleItem.category}"`,
+            saleItem.quantity,
+            saleItem.revenue.toFixed(2),
+            saleItem.cost.toFixed(2),
+            saleItem.profit.toFixed(2),
+            margin.toFixed(1)
+          ].join(','));
+        });
+        
+        // Linha de totais
+        const totalSales = (currentReportData as Array<{revenue: number, cost: number, profit: number}>).reduce(
+          (acc, item) => ({ revenue: acc.revenue + item.revenue, cost: acc.cost + item.cost, profit: acc.profit + item.profit }),
+          { revenue: 0, cost: 0, profit: 0 }
         );
-        csvContent.push(`"TOTAL",,${totalSales.revenue.toFixed(2)},${totalSales.profit.toFixed(2)}`);
+        const totalMargin = totalSales.revenue > 0 ? (totalSales.profit / totalSales.revenue) * 100 : 0;
+        csvContent.push([
+          '"TOTAL"',
+          '""',
+          '""',
+          totalSales.revenue.toFixed(2),
+          totalSales.cost.toFixed(2),
+          totalSales.profit.toFixed(2),
+          totalMargin.toFixed(1)
+        ].join(','));
+        
+        // Separador
+        csvContent.push('');
+        csvContent.push(['DETALHAMENTO DE TRANSAÇÕES'].join(','));
+        csvContent.push([''].join(','));
+        
+        // Cabeçalhos do detalhamento
+        csvContent.push(['Data', 'Produto', 'Qtd', 'Receita (R$)', 'Custo (R$)', 'Lucro (R$)', 'Margem (%)', 'Status'].join(','));
+        
+        // Filtrar transações de venda pelo período selecionado
+        const startDate = new Date(dateRange.start);
+        const endDate = new Date(dateRange.end);
+        endDate.setHours(23, 59, 59, 999);
+        
+        const salesTransactions = transactions.filter(t => 
+          t.type === 'sale' && 
+          new Date(t.created_at) >= startDate && 
+          new Date(t.created_at) <= endDate
+        );
+        
+        // Dados do detalhamento
+        salesTransactions.forEach(transaction => {
+          const product = products.find(p => p.id === transaction.product_id);
+          if (product) {
+            const transactionCost = transaction.quantity * product.cost;
+            const transactionProfit = transaction.total - transactionCost;
+            const transactionMargin = transaction.total > 0 ? (transactionProfit / transaction.total) * 100 : 0;
+            
+            csvContent.push([
+              `"${format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}"`,
+              `"${product.name}"`,
+              transaction.quantity,
+              transaction.total.toFixed(2),
+              transactionCost.toFixed(2),
+              transactionProfit.toFixed(2),
+              transactionMargin.toFixed(1),
+              `"${transaction.payment_status === 'paid' ? 'Pago' : 'Pendente'}"`
+            ].join(','));
+          }
+        });
+      } else {
+        // Cabeçalhos para relatório de estoque
+        csvContent.push(['Produto', 'Categoria', 'Estoque', 'Status', 'Valor Custo (R$)'].join(','));
+        
+        // Dados do estoque
+        currentReportData.forEach(item => {
+          const inventoryItem = item as {name: string, category: string, currentStock: number, status: string, stockValue: number};
+          csvContent.push([
+            `"${inventoryItem.name}"`,
+            `"${inventoryItem.category}"`,
+            inventoryItem.currentStock,
+            `"${inventoryItem.status}"`,
+            inventoryItem.stockValue.toFixed(2)
+          ].join(','));
+        });
       }
       
       const csvString = csvContent.join('\n');
@@ -263,76 +379,88 @@ const Reports: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success('Relatório CSV exportado com sucesso!');
+      toast.success('Relatório CSV exportado!');
     } catch (error) {
       handleError(error, 'reportsPageCSV');
-      toast.error('Erro ao exportar relatório CSV. Tente novamente.');
+      toast.error('Erro ao exportar CSV');
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Relatórios</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Relatórios
+        </h1>
         <div className="flex space-x-2">
-          <button onClick={exportToPDF} className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-            <Download className="w-4 h-4 mr-2" /> PDF
+          <button 
+            onClick={exportToPDF} 
+            className="inline-flex items-center px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Download className="w-4 h-4 mr-1.5" /> PDF
           </button>
-          <button onClick={exportToCSV} className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-            <Download className="w-4 h-4 mr-2" /> CSV
+          <button 
+            onClick={exportToCSV} 
+            className="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Download className="w-4 h-4 mr-1.5" /> CSV
           </button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Filtros */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Relatório</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
             <select 
               value={selectedReport} 
               onChange={(e) => setSelectedReport(e.target.value as 'sales' | 'inventory')} 
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="sales">Relatório de Vendas</option>
-              <option value="inventory">Relatório de Estoque</option>
+              <option value="sales">Vendas</option>
+              <option value="inventory">Estoque</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Inicial</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Data Inicial</label>
             <input 
               type="date" 
               value={dateRange.start} 
               onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} 
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" 
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Final</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Data Final</label>
             <input 
               type="date" 
               value={dateRange.end} 
               onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} 
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" 
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" 
             />
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Vendas Mensais</h3>
+      {/* Vendas Mensais */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
+          Vendas Mensais
+        </h3>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <table className="w-full text-sm">
             <thead>
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mês</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendas</th>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Mês</th>
+                <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Vendas</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody>
               {monthlySalesData.map((data, index) => (
-                <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{data.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">R$ {data.sales.toFixed(2)}</td>
+                <tr key={index} className="border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                  <td className="py-2 text-gray-900 dark:text-white">{data.name}</td>
+                  <td className="py-2 text-gray-900 dark:text-white">R$ {data.sales.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -340,54 +468,68 @@ const Reports: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-          {selectedReport === 'sales' ? <TrendingUp className="w-5 h-5 mr-2" /> : <Package className="w-5 h-5 mr-2" />}
+      {/* Dados do Relatório */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+          {selectedReport === 'sales' ? <TrendingUp className="w-4 h-4 mr-2" /> : <Package className="w-4 h-4 mr-2" />}
           {selectedReport === 'sales' ? 'Dados de Vendas' : 'Dados do Estoque'}
         </h3>
         <div className="overflow-x-auto">
           {selectedReport === 'sales' ? (
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Produto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qtd Vendida</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Receita (R$)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lucro (R$)</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Produto</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Categoria</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Qtd</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Receita</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Custo</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Lucro</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Margem</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {(currentReportData as Array<{name: string, quantity: number, revenue: number, profit: number}>).map((item, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.quantity}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">R$ {item.revenue.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">R$ {item.profit.toFixed(2)}</td>
-                  </tr>
-                ))}
+              <tbody>
+                {(currentReportData as Array<{name: string, category: string, quantity: number, revenue: number, cost: number, profit: number}>).map((item, index) => {
+                  const margin = item.revenue > 0 ? (item.profit / item.revenue) * 100 : 0;
+                  return (
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                      <td className="py-2 font-medium text-gray-900 dark:text-white truncate max-w-[120px]">{item.name}</td>
+                      <td className="py-2 text-gray-900 dark:text-white">{item.category}</td>
+                      <td className="py-2 text-gray-900 dark:text-white">{item.quantity}</td>
+                      <td className="py-2 text-green-600 font-medium">R$ {item.revenue.toFixed(2)}</td>
+                      <td className="py-2 text-red-600 font-medium">R$ {item.cost.toFixed(2)}</td>
+                      <td className="py-2 text-blue-600 font-medium">R$ {item.profit.toFixed(2)}</td>
+                      <td className="py-2 font-medium">{margin.toFixed(1)}%</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Produto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estoque Atual</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor Custo (R$)</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Produto</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Estoque</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Status</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Valor</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody>
                 {(currentReportData as Array<{name: string, currentStock: number, status: string, stockValue: number}>).map((item, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.currentStock}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${item.status === 'Baixo' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'}`}>
+                  <tr key={index} className="border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                    <td className="py-2 font-medium text-gray-900 dark:text-white truncate max-w-[120px]">{item.name}</td>
+                    <td className="py-2 text-gray-900 dark:text-white">{item.currentStock}</td>
+                    <td className="py-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        item.status === 'Baixo' 
+                          ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                          : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                      }`}>
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">R$ {item.stockValue.toFixed(2)}</td>
+                    <td className="py-2 text-gray-900 dark:text-white">R$ {item.stockValue.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -395,6 +537,90 @@ const Reports: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Detalhamento de Transações - Apenas para relatório de vendas */}
+      {selectedReport === 'sales' && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 mt-6">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <Receipt className="w-4 h-4 mr-2" />
+            Detalhamento de Transações
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Data</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Produto</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Qtd</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Receita</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Custo</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Lucro</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Margem</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  // Filtrar transações de venda pelo período selecionado
+                  const startDate = new Date(dateRange.start);
+                  const endDate = new Date(dateRange.end);
+                  endDate.setHours(23, 59, 59, 999);
+                  
+                  const salesTransactions = transactions.filter(t => 
+                    t.type === 'sale' && 
+                    new Date(t.created_at) >= startDate && 
+                    new Date(t.created_at) <= endDate
+                  );
+                  
+                  return salesTransactions.map((transaction, index) => {
+                    const product = products.find(p => p.id === transaction.product_id);
+                    if (!product) return null;
+                    
+                    const transactionCost = transaction.quantity * product.cost;
+                    const transactionProfit = transaction.total - transactionCost;
+                    const transactionMargin = transaction.total > 0 ? (transactionProfit / transaction.total) * 100 : 0;
+                    
+                    return (
+                      <tr key={index} className="border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                        <td className="py-2 text-gray-900 dark:text-white text-xs">
+                          {format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                        </td>
+                        <td className="py-2 font-medium text-gray-900 dark:text-white truncate max-w-[100px]">
+                          {product.name}
+                        </td>
+                        <td className="py-2 text-gray-900 dark:text-white">{transaction.quantity}</td>
+                        <td className="py-2 text-green-600 font-medium">R$ {transaction.total.toFixed(2)}</td>
+                        <td className="py-2 text-red-600 font-medium">R$ {transactionCost.toFixed(2)}</td>
+                        <td className={`py-2 font-medium ${transactionProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          R$ {transactionProfit.toFixed(2)}
+                        </td>
+                        <td className="py-2 font-medium">
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            transactionMargin >= 20 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            transactionMargin >= 10 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {transactionMargin.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="py-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            transaction.payment_status === 'paid' 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            {transaction.payment_status === 'paid' ? 'Pago' : 'Pendente'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -11,13 +11,29 @@ interface CompanyConfig {
 }
 
 /**
+ * Interface representing notification settings
+ */
+interface NotificationSettings {
+  /** Enable/disable low stock alerts */
+  lowStockAlerts: boolean;
+  /** Enable/disable toast notifications for low stock */
+  toastNotifications: boolean;
+  /** Enable/disable dashboard alerts for low stock */
+  dashboardAlerts: boolean;
+}
+
+/**
  * Context type for company configuration
  */
 interface ConfigContextType {
   /** Current company configuration */
   company: CompanyConfig;
+  /** Current notification settings */
+  notifications: NotificationSettings;
   /** Function to update company configuration */
   updateCompany: (config: CompanyConfig) => void;
+  /** Function to update notification settings */
+  updateNotifications: (config: NotificationSettings) => void;
 }
 
 const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
@@ -33,9 +49,22 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return stored ? JSON.parse(stored) : { name: 'Minha Empresa' };
   });
 
+  const [notifications, setNotifications] = useState<NotificationSettings>(() => {
+    const stored = localStorage.getItem('notification-settings');
+    return stored ? JSON.parse(stored) : { 
+      lowStockAlerts: true, 
+      toastNotifications: true, 
+      dashboardAlerts: true 
+    };
+  });
+
   useEffect(() => {
     localStorage.setItem('company-config', JSON.stringify(company));
   }, [company]);
+
+  useEffect(() => {
+    localStorage.setItem('notification-settings', JSON.stringify(notifications));
+  }, [notifications]);
 
   /**
    * Update company configuration settings
@@ -45,8 +74,16 @@ export const ConfigProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCompany(config);
   };
 
+  /**
+   * Update notification settings
+   * @param config - New notification settings
+   */
+  const updateNotifications = (config: NotificationSettings) => {
+    setNotifications(config);
+  };
+
   return (
-    <ConfigContext.Provider value={{ company, updateCompany }}>
+    <ConfigContext.Provider value={{ company, notifications, updateCompany, updateNotifications }}>
       {children}
     </ConfigContext.Provider>
   );

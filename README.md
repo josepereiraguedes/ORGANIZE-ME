@@ -13,6 +13,9 @@ Sistema completo de gestão de estoque e financeiro para pequenos negócios, tot
 - Funciona offline como PWA
 - **Autenticação por e-mail e senha**
 - **Compartilhamento de dados entre dispositivos via importação/exportação**
+- **Categorias e subcategorias de produtos**
+- **Alertas automáticos de estoque baixo**
+- **Interface aprimorada com dropdowns para categorias**
 
 ## Tecnologias
 
@@ -68,6 +71,24 @@ O sistema permite compartilhar dados entre dispositivos diferentes:
 2. **Transferir arquivo**: Envie o arquivo JSON gerado para o outro dispositivo
 3. **Importar dados**: No dispositivo de destino, acesse "Configurações" > "Compartilhamento de Dados" e clique em "Importar Dados"
 4. **Sincronização**: Os dados serão atualizados automaticamente
+
+## Categorias e Subcategorias de Produtos
+
+O sistema agora suporta organização avançada de produtos com:
+
+- **Categorias principais**: Organização de produtos em categorias amplas
+- **Subcategorias**: Classificação mais específica dentro de cada categoria
+- **Filtros aprimorados**: Dropdowns interativos para fácil navegação
+- **Visualização hierárquica**: Exibição clara da estrutura categoria/subcategoria
+
+## Alertas Automáticos de Estoque Baixo
+
+O sistema monitora automaticamente o estoque e notifica quando:
+
+- **Nível mínimo atingido**: Alertas visuais quando o estoque chega ao nível mínimo configurado
+- **Notificações em tempo real**: Toast notifications para produtos com estoque baixo
+- **Destaque visual**: Produtos com estoque baixo são destacados na interface
+- **Resumo de alertas**: Painel dedicado para monitorar todos os produtos com estoque baixo
 
 ## Como construir para produção
 

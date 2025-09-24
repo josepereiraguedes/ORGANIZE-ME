@@ -2,10 +2,12 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Package, DollarSign, TrendingUp, Clock } from 'lucide-react';
 import { FinancialSummary, useLocalDatabase } from '../contexts/LocalDatabaseContext';
 import { handleError } from '../utils/errorHandler';
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
+import LowStockAlerts from '../components/Inventory/LowStockAlerts';
+import CategoryStats from '../components/Inventory/CategoryStats';
 
 const Dashboard: React.FC = () => {
-  const { products, transactions, clients, getFinancialSummary } = useLocalDatabase();
+  const { products, transactions, clients, getFinancialSummary, lowStockAlerts } = useLocalDatabase();
   const [financialData, setFinancialData] = useState<FinancialSummary>({
     totalRevenue: 0,
     totalCosts: 0,
@@ -26,10 +28,6 @@ const Dashboard: React.FC = () => {
     loadFinancialData();
   }, [transactions, getFinancialSummary]);
 
-  const lowStockProducts = useMemo(() => {
-    return products.filter(p => Number(p.quantity) <= Number(p.min_stock));
-  }, [products]);
-
   const totalProducts = useMemo(() => {
     return products.length;
   }, [products]);
@@ -40,28 +38,32 @@ const Dashboard: React.FC = () => {
 
   const statsCards = useMemo(() => [
     {
-      title: 'Faturamento (Pago)',
+      title: 'Faturamento',
       value: `R$ ${financialData.totalRevenue.toFixed(2)}`,
       icon: TrendingUp,
       color: 'purple',
+      subtitle: 'Vendas pagas'
     },
     {
-      title: 'Contas a Receber',
+      title: 'A Receber',
       value: `R$ ${financialData.pendingReceivables.toFixed(2)}`,
       icon: Clock,
       color: 'orange',
+      subtitle: 'Contas pendentes'
     },
     {
-      title: 'Valor do Estoque',
+      title: 'Valor Estoque',
       value: `R$ ${totalValue.toFixed(2)}`,
       icon: DollarSign,
       color: 'green',
+      subtitle: 'Valor total'
     },
     {
-      title: 'Total de Produtos',
+      title: 'Produtos',
       value: totalProducts,
       icon: Package,
       color: 'blue',
+      subtitle: 'Itens no estoque'
     },
   ], [financialData, totalValue, totalProducts]);
 
@@ -114,40 +116,52 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Dashboard
         </h1>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          Última atualização: {new Date().toLocaleString('pt-BR')}
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          Atualizado: {new Date().toLocaleTimeString('pt-BR')}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Alerta de Estoque Baixo */}
+      {lowStockAlerts.length > 0 && (
+        <LowStockAlerts limit={3} />
+      )}
+
+      {/* Cards de Estatísticas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {statsCards.map((stat, index) => (
-          <div
+          <motion.div
             key={stat.title}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            {...({ className: "bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4" } as HTMLMotionProps<'div'>)}
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {stat.title}
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                <p className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
                   {stat.value}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  {stat.subtitle}
                 </p>
               </div>
               <div className={
-                `p-3 rounded-full ${
-                  stat.color === 'purple' ? 'bg-purple-100 dark:bg-purple-900' :
-                  stat.color === 'orange' ? 'bg-orange-100 dark:bg-orange-900' :
-                  stat.color === 'green' ? 'bg-green-100 dark:bg-green-900' :
-                  stat.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900' :
-                  'bg-gray-100 dark:bg-gray-900'
+                `p-2 rounded-lg ${
+                  stat.color === 'purple' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                  stat.color === 'orange' ? 'bg-orange-100 dark:bg-orange-900/30' :
+                  stat.color === 'green' ? 'bg-green-100 dark:bg-green-900/30' :
+                  stat.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                  'bg-gray-100 dark:bg-gray-700'
                 }`
               }>
                 <stat.icon className={
-                  `w-6 h-6 ${
+                  `w-5 h-5 ${
                     stat.color === 'purple' ? 'text-purple-600 dark:text-purple-400' :
                     stat.color === 'orange' ? 'text-orange-600 dark:text-orange-400' :
                     stat.color === 'green' ? 'text-green-600 dark:text-green-400' :
@@ -157,28 +171,35 @@ const Dashboard: React.FC = () => {
                 } />
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Vendas dos Últimos 7 Dias
-          </h3>
+      {/* Conteúdo Principal */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Vendas dos Últimos 7 Dias */}
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-900 dark:text-white">
+              Vendas dos Últimos 7 Dias
+            </h3>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Vendas pagas
+            </div>
+          </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dia</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendas</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Dia</th>
+                  <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Vendas</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody>
                 {last7DaysSales.map((day, index) => (
-                  <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{day.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">R$ {day.sales.toFixed(2)}</td>
+                  <tr key={index} className="border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                    <td className="py-2 text-gray-900 dark:text-white">{day.date}</td>
+                    <td className="py-2 text-gray-900 dark:text-white">R$ {day.sales.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -186,100 +207,114 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Produtos com Estoque Baixo
-          </h3>
-          <div className="space-y-3">
-            {lowStockProducts.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400">Nenhum produto com estoque baixo</p>
-            ) : (
-              lowStockProducts.slice(0, 5).map((product) => (
-                <div key={product.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    {product.image ? (
-                      <img src={product.image} alt={product.name} className="w-10 h-10 object-cover rounded-md mr-3" />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-md mr-3 flex items-center justify-center">
-                        <Package size={20} className="text-gray-400" />
+        {/* Estatísticas por Categoria */}
+        <div className="space-y-6">
+          <CategoryStats />
+          
+          {/* Produtos com Estoque Baixo */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
+              Estoque Baixo
+            </h3>
+            <div className="space-y-3">
+              {lowStockAlerts.length === 0 ? (
+                <div className="text-center py-4">
+                  <Package className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Estoque ok</p>
+                </div>
+              ) : (
+                lowStockAlerts.slice(0, 4).map((product) => (
+                  <div key={product.id} className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg">
+                    <div className="flex items-center">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="w-8 h-8 object-cover rounded-md mr-3" />
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-md mr-3 flex items-center justify-center">
+                          <Package size={16} className="text-gray-400" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[100px]">{product.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{product.category}</p>
                       </div>
-                    )}
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{product.name}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{product.category}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-medium text-red-600">{product.quantity}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">mín: {product.min_stock}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-red-600">{product.quantity} restante(s)</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Mín: {product.min_stock}</p>
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      {/* Últimas Movimentações */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
           Últimas Movimentações
         </h3>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <table className="w-full text-sm">
             <thead>
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Produto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data</th>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Produto</th>
+                <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Cliente</th>
+                <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Quantidade</th>
+                <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Tipo</th>
+                <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Status</th>
+                <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Total</th>
+                <th className="pb-2 text-left text-gray-500 dark:text-gray-400 font-medium">Data</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody>
               {transactions.slice(-5).reverse().map((transaction) => {
                 const product = productMap.get(transaction.product_id);
                 const client = clientMap.get(transaction.client_id);
                 return (
-                  <tr key={transaction.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <tr key={transaction.id} className="border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+                    <td className="py-3">
                       <div className="flex items-center">
                         {product?.image ? (
-                          <img src={product.image} alt={product.name} className="w-10 h-10 object-cover rounded-md mr-3" />
+                          <img src={product.image} alt={product.name} className="w-8 h-8 object-cover rounded-md mr-2" />
                         ) : (
-                          <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-md mr-3 flex items-center justify-center">
-                            <Package size={20} className="text-gray-400" />
+                          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-md mr-2 flex items-center justify-center">
+                            <Package size={16} className="text-gray-400" />
                           </div>
                         )}
-                        <span className="text-sm text-gray-900 dark:text-white">{product?.name || 'N/A'}</span>
+                        <span className="text-gray-900 dark:text-white truncate max-w-[80px]">{product?.name || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="py-3 text-gray-900 dark:text-white">
+                      {client?.name || 'N/A'}
+                    </td>
+                    <td className="py-3 text-gray-900 dark:text-white">
+                      {transaction.quantity}
+                    </td>
+                    <td className="py-3">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        transaction.type === 'sale' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : transaction.type === 'purchase' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                        transaction.type === 'sale' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : transaction.type === 'purchase' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                       }`}>
                         {transaction.type === 'sale' ? 'Venda' : transaction.type === 'purchase' ? 'Compra' : 'Ajuste'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="py-3">
                       {transaction.type === 'sale' && (
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          transaction.payment_status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          transaction.payment_status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                         }`}>
                           {transaction.payment_status === 'paid' ? 'Pago' : 'A Pagar'}
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {client?.name || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="py-3 text-gray-900 dark:text-white">
                       R$ {transaction.total.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="py-3 text-gray-500 dark:text-gray-400 text-xs">
                       {new Date(transaction.created_at).toLocaleDateString('pt-BR')}
                     </td>
                   </tr>

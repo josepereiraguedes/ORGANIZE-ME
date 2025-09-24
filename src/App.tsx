@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { LocalDatabaseProvider } from './contexts/LocalDatabaseContext';
 import { ConfigProvider } from './contexts/ConfigContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import AppContent from './AppContent';
 
 function App() {
@@ -10,9 +11,11 @@ function App() {
     <AuthProvider>
       <ConfigProvider>
         <ThemeProvider>
-          <LocalDatabaseProvider>
-            <AppContent />
-          </LocalDatabaseProvider>
+          <NotificationProvider>
+            <LocalDatabaseProvider>
+              <AppContent />
+            </LocalDatabaseProvider>
+          </NotificationProvider>
         </ThemeProvider>
       </ConfigProvider>
     </AuthProvider>

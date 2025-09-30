@@ -11,6 +11,9 @@ import Routines from "./pages/Routines";
 import Notes from "./pages/Notes";
 import Favorites from "./pages/Favorites";
 import History from "./pages/History";
+import Security from "./pages/Security";
+import Automation from "./pages/Automation";
+import Calendar from "./pages/Calendar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +33,9 @@ const App = () => (
             <Route path="/notes" element={<Notes />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/history" element={<History />} />
+            <Route path="/security" element={<Security />} />
+            <Route path="/automation" element={<Automation />} />
+            <Route path="/calendar" element={<Calendar />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

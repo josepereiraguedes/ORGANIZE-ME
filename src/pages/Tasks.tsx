@@ -268,9 +268,14 @@ export default function Tasks() {
       opacity: isDragging ? 0.5 : 1,
     };
 
+    const dragHandleProps = {
+      ...attributes,
+      ...listeners,
+    };
+
     return (
-      <div ref={setNodeRef} style={style} {...attributes}>
-        <TaskCard task={task} dragHandleProps={listeners} />
+      <div ref={setNodeRef} style={style}>
+        <TaskCard task={task} dragHandleProps={dragHandleProps} />
       </div>
     );
   };

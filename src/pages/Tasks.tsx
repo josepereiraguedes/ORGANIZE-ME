@@ -11,12 +11,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Search, Plus, Edit, Trash2, Calendar as CalendarIcon, Clock, AlertTriangle, CheckCircle, Circle, PlayCircle } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Calendar as CalendarIcon, Clock, AlertTriangle, CheckCircle, Circle, PlayCircle, GripVertical } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { TaskItem, saveToStorage, loadFromStorage, generateId, addActivity } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 
 const priorities = [
   { value: 'low', label: 'Baixa', color: 'bg-green-500' },
@@ -42,6 +44,7 @@ export default function Tasks() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>();
+  const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -217,14 +220,72 @@ export default function Tasks() {
     return dueDateTime < new Date() && task.status !== 'completed';
   };
 
-  const TaskCard = ({ task }: { task: TaskItem }) => {
+  const handleDragStart = (event: DragStartEvent) => {
+    const taskId = event.active.id as string;
+    const task = tasks.find(t => t.id === taskId);
+    setActiveTask(task || null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const newStatus = over.id as TaskItem['status'];
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || task.status === newStatus) return;
+
+    moveTask(taskId, newStatus);
+    
+    toast({
+      title: "Tarefa movida",
+      description: `Tarefa movida para ${statusColumns.find(c => c.id === newStatus)?.title}`
+    });
+  };
+
+  const DroppableColumn = ({ id, children }: { id: TaskItem['status']; children: React.ReactNode }) => {
+    const { setNodeRef } = useDroppable({
+      id: id,
+    });
+
+    return (
+      <div ref={setNodeRef} className="h-full">
+        {children}
+      </div>
+    );
+  };
+
+  const DraggableTaskCard = ({ task }: { task: TaskItem }) => {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+      id: task.id,
+    });
+
+    const style = {
+      transform: CSS.Translate.toString(transform),
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <div ref={setNodeRef} style={style} {...attributes}>
+        <TaskCard task={task} dragHandleProps={listeners} />
+      </div>
+    );
+  };
+
+  const TaskCard = ({ task, dragHandleProps }: { task: TaskItem; dragHandleProps?: any }) => {
     const priority = priorities.find(p => p.value === task.priority);
     const overdue = isOverdue(task);
     
     return (
-      <Card className={cn("mb-3", overdue && "border-red-500")}>
+      <Card className={cn("mb-3 cursor-move", overdue && "border-red-500")}>
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-2">
+            <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing pt-1">
+              <GripVertical className="h-5 w-5 text-muted-foreground" />
+            </div>
             <div className="flex-1">
               <CardTitle className="text-base">{task.title}</CardTitle>
               <div className="flex items-center gap-2 mt-2">
@@ -537,34 +598,41 @@ export default function Tasks() {
       </div>
 
       {/* Kanban Board */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {statusColumns.map(column => {
-          const columnTasks = getTasksByStatus(column.id as TaskItem['status']);
-          const ColumnIcon = column.icon;
-          
-          return (
-            <div key={column.id} className="space-y-4">
-              <div className="flex items-center gap-2 p-4 bg-muted rounded-lg">
-                <ColumnIcon className={cn("h-5 w-5", column.color)} />
-                <h3 className="font-semibold">{column.title}</h3>
-                <Badge variant="secondary">{columnTasks.length}</Badge>
-              </div>
-              
-              <div className="space-y-3">
-                {columnTasks.map(task => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-                
-                {columnTasks.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                    Nenhuma tarefa
+      <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {statusColumns.map(column => {
+            const columnTasks = getTasksByStatus(column.id as TaskItem['status']);
+            const ColumnIcon = column.icon;
+            
+            return (
+              <DroppableColumn key={column.id} id={column.id as TaskItem['status']}>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-4 bg-muted rounded-lg">
+                    <ColumnIcon className={cn("h-5 w-5", column.color)} />
+                    <h3 className="font-semibold">{column.title}</h3>
+                    <Badge variant="secondary">{columnTasks.length}</Badge>
                   </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                  
+                  <div className="space-y-3 min-h-[200px]">
+                    {columnTasks.map(task => (
+                      <DraggableTaskCard key={task.id} task={task} />
+                    ))}
+                    
+                    {columnTasks.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                        Arraste tarefas aqui
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </DroppableColumn>
+            );
+          })}
+        </div>
+        <DragOverlay>
+          {activeTask ? <TaskCard task={activeTask} /> : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }

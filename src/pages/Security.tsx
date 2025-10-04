@@ -1,16 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, Lock, Eye, EyeOff, Download, Upload, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Shield, Lock, Eye, EyeOff, Download, Upload, Trash2, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function Security() {
   const [masterPassword, setMasterPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [autoLogout, setAutoLogout] = useState(() => {
+    return localStorage.getItem('autoLogout') === 'true';
+  });
+  const [requireConfirmation, setRequireConfirmation] = useState(() => {
+    return localStorage.getItem('requireConfirmation') === 'true';
+  });
+  const [encryptData, setEncryptData] = useState(() => {
+    return localStorage.getItem('encryptData') === 'true';
+  });
   const { toast } = useToast();
+
+  useEffect(() => {
+    localStorage.setItem('autoLogout', autoLogout.toString());
+  }, [autoLogout]);
+
+  useEffect(() => {
+    localStorage.setItem('requireConfirmation', requireConfirmation.toString());
+  }, [requireConfirmation]);
+
+  useEffect(() => {
+    localStorage.setItem('encryptData', encryptData.toString());
+  }, [encryptData]);
 
   const handleExportData = () => {
     const data = {
@@ -101,11 +123,64 @@ export default function Security() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              <CardTitle>Criptografia</CardTitle>
+              <Settings className="h-5 w-5 text-primary" />
+              <CardTitle>Configurações de Segurança</CardTitle>
             </div>
             <CardDescription>
-              Seus dados são criptografados localmente usando XOR encryption
+              Personalize as opções de segurança do aplicativo
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="auto-logout">Auto-logout</Label>
+                <p className="text-sm text-muted-foreground">
+                  Desconectar automaticamente após inatividade
+                </p>
+              </div>
+              <Switch
+                id="auto-logout"
+                checked={autoLogout}
+                onCheckedChange={setAutoLogout}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="require-confirmation">Confirmar ações</Label>
+                <p className="text-sm text-muted-foreground">
+                  Pedir confirmação antes de ações importantes
+                </p>
+              </div>
+              <Switch
+                id="require-confirmation"
+                checked={requireConfirmation}
+                onCheckedChange={setRequireConfirmation}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="encrypt-data">Criptografia de dados</Label>
+                <p className="text-sm text-muted-foreground">
+                  Criptografar dados sensíveis localmente
+                </p>
+              </div>
+              <Switch
+                id="encrypt-data"
+                checked={encryptData}
+                onCheckedChange={setEncryptData}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <CardTitle>Senha Mestra</CardTitle>
+            </div>
+            <CardDescription>
+              Proteja seus dados com uma senha adicional
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

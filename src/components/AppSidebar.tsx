@@ -11,7 +11,6 @@ import {
   Calendar
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
-import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +22,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navigationItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -42,7 +42,6 @@ const quickActions = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
-  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -119,7 +118,13 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* User Section */}
-        <div className="mt-auto p-4 border-t border-border/50">
+        <div className="mt-auto p-4 border-t border-border/50 space-y-3">
+          <div className="flex items-center justify-between">
+            {state !== "collapsed" && (
+              <span className="text-sm font-medium">Tema</span>
+            )}
+            <ThemeToggle />
+          </div>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-accent rounded-full flex items-center justify-center">
               <span className="text-xs font-medium text-white">U</span>

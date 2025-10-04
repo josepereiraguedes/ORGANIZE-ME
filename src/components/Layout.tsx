@@ -1,8 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Search, Bell, Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface LayoutProps {
@@ -29,15 +27,6 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="hover:bg-muted/50">
-                <Bell className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-muted/50">
-                <Settings className="h-4 w-4" />
-              </Button>
-              <ThemeToggle />
-            </div>
           </header>
 
           {/* Main content */}

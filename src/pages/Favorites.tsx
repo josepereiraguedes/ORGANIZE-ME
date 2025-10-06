@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Search, Plus, Edit, Trash2, ExternalLink, Globe, Star, Bookmark, Link as LinkIcon, Video, Code, BookOpen, FileText, Music } from 'lucide-react';
-import { FavoriteItem, saveToStorage, loadFromStorage, generateId, addActivity } from '@/lib/storage';
+import { FavoriteItem } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { useAppContext } from '@/contexts/AppContext';
+import { storageService } from '@/services/storageService';
 
 const categories = [
   { value: 'websites', label: 'Sites', icon: Globe },
@@ -36,7 +38,7 @@ const iconOptions = [
 ];
 
 export default function Favorites() {
-  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const { favorites, addFavorite, updateFavorite, deleteFavorite } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -50,20 +52,6 @@ export default function Favorites() {
     icon: 'globe',
     category: 'websites'
   });
-
-  useEffect(() => {
-    loadFavorites();
-  }, []);
-
-  const loadFavorites = () => {
-    const savedFavorites = loadFromStorage<FavoriteItem[]>('favorites', []);
-    setFavorites(savedFavorites);
-  };
-
-  const saveFavorites = (newFavorites: FavoriteItem[]) => {
-    saveToStorage('favorites', newFavorites);
-    setFavorites(newFavorites);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,25 +81,22 @@ export default function Favorites() {
     const now = new Date().toISOString();
     
     if (editingFavorite) {
-      const updatedFavorites = favorites.map(favorite => 
-        favorite.id === editingFavorite.id 
-          ? { ...favorite, ...formData }
-          : favorite
-      );
-      saveFavorites(updatedFavorites);
-      addActivity('favorite', 'Editado', formData.title);
+      const updatedFavorite = { 
+        ...editingFavorite, 
+        ...formData 
+      };
+      updateFavorite(updatedFavorite);
       toast({
         title: "Sucesso",
         description: "Favorito atualizado com sucesso"
       });
     } else {
       const newFavorite: FavoriteItem = {
-        id: generateId(),
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         ...formData,
         createdAt: now
       };
-      saveFavorites([...favorites, newFavorite]);
-      addActivity('favorite', 'Criado', formData.title);
+      addFavorite(newFavorite);
       toast({
         title: "Sucesso",
         description: "Favorito criado com sucesso"
@@ -145,10 +130,8 @@ export default function Favorites() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string, title: string) => {
-    const updatedFavorites = favorites.filter(favorite => favorite.id !== id);
-    saveFavorites(updatedFavorites);
-    addActivity('favorite', 'Excluído', title);
+  const handleDelete = (id: string) => {
+    deleteFavorite(id);
     toast({
       title: "Sucesso",
       description: "Favorito excluído com sucesso"
@@ -163,12 +146,15 @@ export default function Favorites() {
   const duplicateFavorite = (favorite: FavoriteItem) => {
     const newFavorite: FavoriteItem = {
       ...favorite,
-      id: generateId(),
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       title: `${favorite.title} (Cópia)`,
       createdAt: new Date().toISOString()
     };
-    saveFavorites([...favorites, newFavorite]);
-    addActivity('favorite', 'Duplicado', newFavorite.title);
+    addFavorite(newFavorite);
+    
+    // Adicionando atividade através do storageService
+    storageService.addActivity('favorite', 'Duplicado', newFavorite.title);
+    
     toast({
       title: "Sucesso",
       description: "Favorito duplicado com sucesso"
@@ -278,9 +264,10 @@ export default function Favorites() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleDelete(favorite.id, favorite.title)}>
+                    <AlertDialogAction onClick={() => handleDelete(favorite.id)}>
                       Excluir
                     </AlertDialogAction>
+
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

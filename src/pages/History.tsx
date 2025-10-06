@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,8 +8,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Search, History as HistoryIcon, Download, Trash2, Key, CheckSquare, RotateCcw, StickyNote, Star, Clock, Calendar } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ActivityItem, saveToStorage, loadFromStorage } from '@/lib/storage';
+import { ActivityItem } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { useAppContext } from '@/contexts/AppContext';
+import { storageService } from '@/services/storageService';
 
 const activityTypes = [
   { value: 'all', label: 'Todas as atividades', icon: HistoryIcon },
@@ -30,34 +32,26 @@ const timeFilters = [
 ];
 
 export default function History() {
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const { activities, loadActivities } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState('all');
   const { toast } = useToast();
 
-  useEffect(() => {
+  const clearAllHistory = useCallback(() => {
+    storageService.saveActivities([]);
     loadActivities();
-  }, []);
-
-  const loadActivities = () => {
-    const savedActivities = loadFromStorage<ActivityItem[]>('activities', []);
-    setActivities(savedActivities);
-  };
-
-  const clearAllHistory = () => {
-    saveToStorage('activities', []);
-    setActivities([]);
+    
     toast({
       title: "Histórico limpo",
       description: "Todo o histórico de atividades foi removido"
     });
-  };
+  }, [loadActivities, toast]);
 
   const exportHistory = () => {
     const csvContent = [
       ['Data/Hora', 'Tipo', 'Ação', 'Item'].join(','),
-      ...filteredActivities.map(activity => [
+      ...activities.map(activity => [
         new Date(activity.timestamp).toLocaleString('pt-BR'),
         getActivityTypeLabel(activity.type),
         activity.action,

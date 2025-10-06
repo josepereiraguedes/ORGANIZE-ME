@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Search, Plus, Edit, Trash2, Pin, Hash, StickyNote } from 'lucide-react';
-import { NoteItem, saveToStorage, loadFromStorage, generateId, addActivity } from '@/lib/storage';
+import { NoteItem } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { useAppContext } from '@/contexts/AppContext';
+import { storageService } from '@/services/storageService';
 
 const predefinedTags = [
   'Ideias', 'Trabalho', 'Estudos', 'Pessoal', 'Projeto', 'Lembretes', 
@@ -17,7 +19,7 @@ const predefinedTags = [
 ];
 
 export default function Notes() {
-  const [notes, setNotes] = useState<NoteItem[]>([]);
+  const { notes, addNote, updateNote, deleteNote } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -31,20 +33,6 @@ export default function Notes() {
     tags: [] as string[],
     isPinned: false
   });
-
-  useEffect(() => {
-    loadNotes();
-  }, []);
-
-  const loadNotes = () => {
-    const savedNotes = loadFromStorage<NoteItem[]>('notes', []);
-    setNotes(savedNotes);
-  };
-
-  const saveNotes = (newNotes: NoteItem[]) => {
-    saveToStorage('notes', newNotes);
-    setNotes(newNotes);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,26 +49,24 @@ export default function Notes() {
     const now = new Date().toISOString();
     
     if (editingNote) {
-      const updatedNotes = notes.map(note => 
-        note.id === editingNote.id 
-          ? { ...note, ...formData, updatedAt: now }
-          : note
-      );
-      saveNotes(updatedNotes);
-      addActivity('note', 'Editada', formData.title);
+      const updatedNote = { 
+        ...editingNote, 
+        ...formData, 
+        updatedAt: now 
+      };
+      updateNote(updatedNote);
       toast({
         title: "Sucesso",
         description: "Nota atualizada com sucesso"
       });
     } else {
       const newNote: NoteItem = {
-        id: generateId(),
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         ...formData,
         createdAt: now,
         updatedAt: now
       };
-      saveNotes([...notes, newNote]);
-      addActivity('note', 'Criada', formData.title);
+      addNote(newNote);
       toast({
         title: "Sucesso",
         description: "Nota criada com sucesso"
@@ -113,10 +99,8 @@ export default function Notes() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string, title: string) => {
-    const updatedNotes = notes.filter(note => note.id !== id);
-    saveNotes(updatedNotes);
-    addActivity('note', 'Excluída', title);
+  const handleDelete = (id: string) => {
+    deleteNote(id);
     toast({
       title: "Sucesso",
       description: "Nota excluída com sucesso"
@@ -124,12 +108,10 @@ export default function Notes() {
   };
 
   const togglePin = (id: string) => {
-    const updatedNotes = notes.map(note => 
-      note.id === id 
-        ? { ...note, isPinned: !note.isPinned, updatedAt: new Date().toISOString() }
-        : note
-    );
-    saveNotes(updatedNotes);
+    const note = notes.find(n => n.id === id);
+    if (note) {
+      updateNote({ ...note, isPinned: !note.isPinned, updatedAt: new Date().toISOString() });
+    }
   };
 
   const addTag = (tag: string) => {
@@ -149,13 +131,16 @@ export default function Notes() {
   const duplicateNote = (note: NoteItem) => {
     const newNote: NoteItem = {
       ...note,
-      id: generateId(),
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       title: `${note.title} (Cópia)`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    saveNotes([...notes, newNote]);
-    addActivity('note', 'Duplicada', newNote.title);
+    addNote(newNote);
+    
+    // Adicionando atividade através do storageService
+    storageService.addActivity('note', 'Duplicada', newNote.title);
+    
     toast({
       title: "Sucesso",
       description: "Nota duplicada com sucesso"
@@ -424,7 +409,7 @@ export default function Notes() {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(note.id, note.title)}>
+                        <AlertDialogAction onClick={() => handleDelete(note.id)}>
                           Excluir
                         </AlertDialogAction>
                       </AlertDialogFooter>

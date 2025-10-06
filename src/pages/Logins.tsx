@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Search, Plus, Eye, EyeOff, Edit, Copy, Trash2, Star, Globe, Building, ShoppingCart, CreditCard, Users } from 'lucide-react';
-import { LoginItem, saveToStorage, loadFromStorage, generateId, addActivity } from '@/lib/storage';
+import { LoginItem } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { useAppContext } from '@/contexts/AppContext';
 
 const categories = [
   { value: 'work', label: 'Trabalho', icon: Building },
@@ -23,7 +24,7 @@ const categories = [
 ];
 
 export default function Logins() {
-  const [logins, setLogins] = useState<LoginItem[]>([]);
+  const { logins, addLogin, updateLogin, deleteLogin } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
@@ -41,20 +42,6 @@ export default function Logins() {
     isFavorite: false
   });
 
-  useEffect(() => {
-    loadLogins();
-  }, []);
-
-  const loadLogins = () => {
-    const savedLogins = loadFromStorage<LoginItem[]>('logins', [], true);
-    setLogins(savedLogins);
-  };
-
-  const saveLogins = (newLogins: LoginItem[]) => {
-    saveToStorage('logins', newLogins, true);
-    setLogins(newLogins);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -70,26 +57,24 @@ export default function Logins() {
     const now = new Date().toISOString();
     
     if (editingLogin) {
-      const updatedLogins = logins.map(login => 
-        login.id === editingLogin.id 
-          ? { ...login, ...formData, updatedAt: now }
-          : login
-      );
-      saveLogins(updatedLogins);
-      addActivity('login', 'Editado', formData.title);
+      const updatedLogin = { 
+        ...editingLogin, 
+        ...formData, 
+        updatedAt: now 
+      };
+      updateLogin(updatedLogin);
       toast({
         title: "Sucesso",
         description: "Login atualizado com sucesso"
       });
     } else {
       const newLogin: LoginItem = {
-        id: generateId(),
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         ...formData,
         createdAt: now,
         updatedAt: now
       };
-      saveLogins([...logins, newLogin]);
-      addActivity('login', 'Criado', formData.title);
+      addLogin(newLogin);
       toast({
         title: "Sucesso",
         description: "Login salvo com sucesso"
@@ -127,10 +112,8 @@ export default function Logins() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string, title: string) => {
-    const updatedLogins = logins.filter(login => login.id !== id);
-    saveLogins(updatedLogins);
-    addActivity('login', 'Excluído', title);
+  const handleDelete = (id: string) => {
+    deleteLogin(id);
     toast({
       title: "Sucesso",
       description: "Login excluído com sucesso"
@@ -138,12 +121,10 @@ export default function Logins() {
   };
 
   const toggleFavorite = (id: string) => {
-    const updatedLogins = logins.map(login => 
-      login.id === id 
-        ? { ...login, isFavorite: !login.isFavorite, updatedAt: new Date().toISOString() }
-        : login
-    );
-    saveLogins(updatedLogins);
+    const login = logins.find(l => l.id === id);
+    if (login) {
+      updateLogin({ ...login, isFavorite: !login.isFavorite, updatedAt: new Date().toISOString() });
+    }
   };
 
   const copyToClipboard = (text: string, type: string) => {
@@ -176,12 +157,12 @@ export default function Logins() {
     });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Gerenciador de Logins</h1>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold">Gerenciador de Logins</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={resetForm}>
+            <Button onClick={resetForm} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Novo Login
             </Button>
@@ -273,8 +254,8 @@ export default function Logins() {
         </Dialog>
       </div>
 
-      <div className="flex gap-4 flex-wrap">
-        <div className="flex-1 min-w-64">
+      <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+        <div className="flex-1">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -286,7 +267,7 @@ export default function Logins() {
           </div>
         </div>
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Filtrar por categoria" />
           </SelectTrigger>
           <SelectContent>
@@ -300,7 +281,7 @@ export default function Logins() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
         {filteredLogins.map(login => {
           const categoryInfo = categories.find(cat => cat.value === login.category);
           const CategoryIcon = categoryInfo?.icon || Globe;
@@ -313,9 +294,9 @@ export default function Logins() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <CategoryIcon className="h-5 w-5 text-primary" />
+                    <CategoryIcon className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                     <div>
-                      <CardTitle className="text-lg">{login.title}</CardTitle>
+                      <CardTitle className="text-base md:text-lg">{login.title}</CardTitle>
                       <Badge variant="secondary" className="text-xs mt-1">
                         {categoryInfo?.label}
                       </Badge>
@@ -334,7 +315,7 @@ export default function Logins() {
               <CardContent className="space-y-3">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">E-mail:</span>
+                    <span className="text-xs md:text-sm text-muted-foreground">E-mail:</span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -344,12 +325,12 @@ export default function Logins() {
                       <Copy className="h-3 w-3" />
                     </Button>
                   </div>
-                  <p className="font-mono text-sm bg-muted p-2 rounded break-all">{login.email}</p>
+                  <p className="font-mono text-xs md:text-sm bg-muted p-2 rounded break-all">{login.email}</p>
                 </div>
                 
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Senha:</span>
+                    <span className="text-xs md:text-sm text-muted-foreground">Senha:</span>
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
@@ -369,15 +350,15 @@ export default function Logins() {
                       </Button>
                     </div>
                   </div>
-                  <p className="font-mono text-sm bg-muted p-2 rounded">
+                  <p className="font-mono text-xs md:text-sm bg-muted p-2 rounded">
                     {showPasswords[login.id] ? login.password : '••••••••'}
                   </p>
                 </div>
 
                 {login.website && (
                   <div>
-                    <span className="text-sm text-muted-foreground">Site:</span>
-                    <p className="text-sm text-primary underline cursor-pointer" 
+                    <span className="text-xs md:text-sm text-muted-foreground">Site:</span>
+                    <p className="text-xs md:text-sm text-primary underline cursor-pointer" 
                        onClick={() => window.open(login.website, '_blank')}>
                       {login.website}
                     </p>
@@ -386,8 +367,8 @@ export default function Logins() {
 
                 {login.notes && (
                   <div>
-                    <span className="text-sm text-muted-foreground">Observações:</span>
-                    <p className="text-sm">{login.notes}</p>
+                    <span className="text-xs md:text-sm text-muted-foreground">Observações:</span>
+                    <p className="text-xs md:text-sm">{login.notes}</p>
                   </div>
                 )}
 
@@ -419,7 +400,7 @@ export default function Logins() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(login.id, login.title)}>
+                          <AlertDialogAction onClick={() => handleDelete(login.id)}>
                             Excluir
                           </AlertDialogAction>
                         </AlertDialogFooter>
@@ -434,7 +415,7 @@ export default function Logins() {
       </div>
 
       {filteredLogins.length === 0 && (
-        <div className="text-center py-12">
+        <div className="text-center py-8 md:py-12">
           <p className="text-muted-foreground">
             {searchTerm || selectedCategory !== 'all' 
               ? 'Nenhum login encontrado com os filtros aplicados.'

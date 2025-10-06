@@ -1,4 +1,6 @@
-// Utility functions for local storage with basic encryption
+// Utility functions for local storage with encryption
+import { saveSecureData, loadSecureData } from '@/services/securityService';
+
 export interface LoginItem {
   id: string;
   title: string;
@@ -67,56 +69,21 @@ export interface ActivityItem {
   timestamp: string;
 }
 
-// Simple encryption/decryption (basic XOR - for demo purposes)
-const ENCRYPTION_KEY = 'OrganizerPro2024';
-
-function simpleEncrypt(text: string): string {
-  let result = '';
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(
-      text.charCodeAt(i) ^ ENCRYPTION_KEY.charCodeAt(i % ENCRYPTION_KEY.length)
-    );
-  }
-  return btoa(result);
+export interface AutomationRule {
+  id: string;
+  title: string;
+  description: string;
+  icon: string; // Icon name for serialization
+  enabled: boolean;
 }
 
-function simpleDecrypt(encrypted: string): string {
-  try {
-    const text = atob(encrypted);
-    let result = '';
-    for (let i = 0; i < text.length; i++) {
-      result += String.fromCharCode(
-        text.charCodeAt(i) ^ ENCRYPTION_KEY.charCodeAt(i % ENCRYPTION_KEY.length)
-      );
-    }
-    return result;
-  } catch {
-    return '';
-  }
-}
-
-// Storage functions
+// Storage functions using the new security service
 export function saveToStorage<T>(key: string, data: T, encrypt = false): void {
-  try {
-    const jsonData = JSON.stringify(data);
-    const finalData = encrypt ? simpleEncrypt(jsonData) : jsonData;
-    localStorage.setItem(key, finalData);
-  } catch (error) {
-    console.error('Error saving to storage:', error);
-  }
+  saveSecureData(key, data, encrypt);
 }
 
 export function loadFromStorage<T>(key: string, defaultValue: T, encrypted = false): T {
-  try {
-    const stored = localStorage.getItem(key);
-    if (!stored) return defaultValue;
-    
-    const jsonData = encrypted ? simpleDecrypt(stored) : stored;
-    return JSON.parse(jsonData);
-  } catch (error) {
-    console.error('Error loading from storage:', error);
-    return defaultValue;
-  }
+  return loadSecureData(key, defaultValue, encrypted);
 }
 
 export function generateId(): string {
@@ -124,7 +91,7 @@ export function generateId(): string {
 }
 
 export function addActivity(type: ActivityItem['type'], action: string, itemTitle: string): void {
-  const activities = loadFromStorage<ActivityItem[]>('activities', []);
+  const activities = loadFromStorage<ActivityItem[]>('activities', [], true);
   const newActivity: ActivityItem = {
     id: generateId(),
     type,
@@ -139,5 +106,5 @@ export function addActivity(type: ActivityItem['type'], action: string, itemTitl
     activities.splice(100);
   }
   
-  saveToStorage('activities', activities);
+  saveToStorage('activities', activities, true);
 }

@@ -1,25 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
-import { loadFromStorage, TaskItem, RoutineItem } from '@/lib/storage';
+import { useAppContext } from '@/contexts/AppContext';
 
 export default function Calendar() {
+  const { tasks, routines } = useAppContext();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [routines, setRoutines] = useState<RoutineItem[]>([]);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    const savedTasks = loadFromStorage<TaskItem[]>('tasks', []);
-    const savedRoutines = loadFromStorage<RoutineItem[]>('routines', []);
-    setTasks(savedTasks);
-    setRoutines(savedRoutines);
-  };
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();

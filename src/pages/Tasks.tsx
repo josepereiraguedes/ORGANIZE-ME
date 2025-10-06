@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,10 +15,12 @@ import { Search, Plus, Edit, Trash2, Calendar as CalendarIcon, Clock, AlertTrian
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { TaskItem, saveToStorage, loadFromStorage, generateId, addActivity } from '@/lib/storage';
+import { TaskItem } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
+import { useAppContext } from '@/contexts/AppContext';
+import { storageService } from '@/services/storageService';
 
 const priorities = [
   { value: 'low', label: 'Baixa', color: 'bg-green-500' },
@@ -37,7 +39,7 @@ const statusColumns = [
 ];
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const { tasks, addTask, updateTask, deleteTask } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
@@ -58,20 +60,6 @@ export default function Tasks() {
     recurringType: 'weekly' as TaskItem['recurringType']
   });
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
-
-  const loadTasks = () => {
-    const savedTasks = loadFromStorage<TaskItem[]>('tasks', []);
-    setTasks(savedTasks);
-  };
-
-  const saveTasks = (newTasks: TaskItem[]) => {
-    saveToStorage('tasks', newTasks);
-    setTasks(newTasks);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -87,27 +75,25 @@ export default function Tasks() {
     const now = new Date().toISOString();
     
     if (editingTask) {
-      const updatedTasks = tasks.map(task => 
-        task.id === editingTask.id 
-          ? { ...task, ...formData, updatedAt: now }
-          : task
-      );
-      saveTasks(updatedTasks);
-      addActivity('task', 'Editada', formData.title);
+      const updatedTask = { 
+        ...editingTask, 
+        ...formData, 
+        updatedAt: now 
+      };
+      updateTask(updatedTask);
       toast({
         title: "Sucesso",
         description: "Tarefa atualizada com sucesso"
       });
     } else {
       const newTask: TaskItem = {
-        id: generateId(),
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         ...formData,
         status: 'pending',
         createdAt: now,
         updatedAt: now
       };
-      saveTasks([...tasks, newTask]);
-      addActivity('task', 'Criada', formData.title);
+      addTask(newTask);
       toast({
         title: "Sucesso",
         description: "Tarefa criada com sucesso"
@@ -151,10 +137,8 @@ export default function Tasks() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string, title: string) => {
-    const updatedTasks = tasks.filter(task => task.id !== id);
-    saveTasks(updatedTasks);
-    addActivity('task', 'Excluída', title);
+  const handleDelete = (id: string) => {
+    deleteTask(id);
     toast({
       title: "Sucesso",
       description: "Tarefa excluída com sucesso"
@@ -162,30 +146,32 @@ export default function Tasks() {
   };
 
   const moveTask = (taskId: string, newStatus: TaskItem['status']) => {
-    const updatedTasks = tasks.map(task => {
-      if (task.id === taskId) {
-        const updatedTask = { ...task, status: newStatus, updatedAt: new Date().toISOString() };
-        if (newStatus === 'completed') {
-          addActivity('task', 'Concluída', task.title);
-        }
-        return updatedTask;
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      const updatedTask = { ...task, status: newStatus, updatedAt: new Date().toISOString() };
+      updateTask(updatedTask);
+      
+      if (newStatus === 'completed') {
+        // Adicionando atividade através do storageService
+        storageService.addActivity('task', 'Concluída', task.title);
       }
-      return task;
-    });
-    saveTasks(updatedTasks);
+    }
   };
 
   const duplicateTask = (task: TaskItem) => {
     const newTask: TaskItem = {
       ...task,
-      id: generateId(),
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       title: `${task.title} (Cópia)`,
       status: 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    saveTasks([...tasks, newTask]);
-    addActivity('task', 'Duplicada', newTask.title);
+    addTask(newTask);
+    
+    // Adicionando atividade através do storageService
+    storageService.addActivity('task', 'Duplicada', newTask.title);
+    
     toast({
       title: "Sucesso",
       description: "Tarefa duplicada com sucesso"
@@ -280,7 +266,7 @@ export default function Tasks() {
     );
   };
 
-  const TaskCard = ({ task, dragHandleProps }: { task: TaskItem; dragHandleProps?: any }) => {
+  const TaskCard = ({ task, dragHandleProps }: { task: TaskItem; dragHandleProps?: Record<string, unknown> }) => {
     const priority = priorities.find(p => p.value === task.priority);
     const overdue = isOverdue(task);
     
@@ -403,9 +389,10 @@ export default function Tasks() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleDelete(task.id, task.title)}>
+                    <AlertDialogAction onClick={() => handleDelete(task.id)}>
                       Excluir
                     </AlertDialogAction>
+
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -537,7 +524,7 @@ export default function Tasks() {
                 </div>
                 
                 {formData.isRecurring && (
-                  <Select value={formData.recurringType} onValueChange={(value: TaskItem['recurringType']) => setFormData({ ...formData, recurringType: value })}>
+                  <Select value={formData.recurringType || ''} onValueChange={(value) => setFormData({ ...formData, recurringType: value as TaskItem['recurringType'] })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

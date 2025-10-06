@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Search, Plus, Edit, Trash2, Play, Pause, Clock, CheckCircle, RotateCcw, X } from 'lucide-react';
-import { RoutineItem, saveToStorage, loadFromStorage, generateId, addActivity } from '@/lib/storage';
+import { RoutineItem } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { useAppContext } from '@/contexts/AppContext';
+import { storageService } from '@/services/storageService';
 
 const daysOfWeek = [
   { value: 'sunday', label: 'Dom', fullName: 'Domingo' },
@@ -25,7 +27,7 @@ const daysOfWeek = [
 ];
 
 export default function Routines() {
-  const [routines, setRoutines] = useState<RoutineItem[]>([]);
+  const { routines, addRoutine, updateRoutine, deleteRoutine } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRoutine, setEditingRoutine] = useState<RoutineItem | null>(null);
@@ -39,20 +41,6 @@ export default function Routines() {
     time: '',
     isActive: true
   });
-
-  useEffect(() => {
-    loadRoutines();
-  }, []);
-
-  const loadRoutines = () => {
-    const savedRoutines = loadFromStorage<RoutineItem[]>('routines', []);
-    setRoutines(savedRoutines);
-  };
-
-  const saveRoutines = (newRoutines: RoutineItem[]) => {
-    saveToStorage('routines', newRoutines);
-    setRoutines(newRoutines);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,32 +66,30 @@ export default function Routines() {
 
     const now = new Date().toISOString();
     const checklist = validChecklistItems.map(task => ({
-      id: generateId(),
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       task: task.trim(),
       completed: false
     }));
     
     if (editingRoutine) {
-      const updatedRoutines = routines.map(routine => 
-        routine.id === editingRoutine.id 
-          ? { ...routine, ...formData, checklist }
-          : routine
-      );
-      saveRoutines(updatedRoutines);
-      addActivity('routine', 'Editada', formData.title);
+      const updatedRoutine = { 
+        ...editingRoutine, 
+        ...formData, 
+        checklist 
+      };
+      updateRoutine(updatedRoutine);
       toast({
         title: "Sucesso",
         description: "Rotina atualizada com sucesso"
       });
     } else {
       const newRoutine: RoutineItem = {
-        id: generateId(),
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         ...formData,
         checklist,
         createdAt: now
       };
-      saveRoutines([...routines, newRoutine]);
-      addActivity('routine', 'Criada', formData.title);
+      addRoutine(newRoutine);
       toast({
         title: "Sucesso",
         description: "Rotina criada com sucesso"
@@ -139,10 +125,8 @@ export default function Routines() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string, title: string) => {
-    const updatedRoutines = routines.filter(routine => routine.id !== id);
-    saveRoutines(updatedRoutines);
-    addActivity('routine', 'Excluída', title);
+  const handleDelete = (id: string) => {
+    deleteRoutine(id);
     toast({
       title: "Sucesso",
       description: "Rotina excluída com sucesso"
@@ -150,57 +134,53 @@ export default function Routines() {
   };
 
   const toggleRoutineStatus = (id: string) => {
-    const updatedRoutines = routines.map(routine => 
-      routine.id === id 
-        ? { ...routine, isActive: !routine.isActive }
-        : routine
-    );
-    saveRoutines(updatedRoutines);
+    const routine = routines.find(r => r.id === id);
+    if (routine) {
+      updateRoutine({ ...routine, isActive: !routine.isActive });
+    }
   };
 
   const toggleChecklistItem = (routineId: string, checklistItemId: string) => {
-    const updatedRoutines = routines.map(routine => {
-      if (routine.id === routineId) {
-        const updatedChecklist = routine.checklist.map(item =>
-          item.id === checklistItemId
-            ? { ...item, completed: !item.completed }
-            : item
-        );
-        return { ...routine, checklist: updatedChecklist };
-      }
-      return routine;
-    });
-    saveRoutines(updatedRoutines);
+    const routine = routines.find(r => r.id === routineId);
+    if (routine) {
+      const updatedChecklist = routine.checklist.map(item =>
+        item.id === checklistItemId
+          ? { ...item, completed: !item.completed }
+          : item
+      );
+      updateRoutine({ ...routine, checklist: updatedChecklist });
+    }
   };
 
   const completeRoutine = (id: string, title: string) => {
-    const updatedRoutines = routines.map(routine => 
-      routine.id === id 
-        ? { 
-            ...routine, 
-            lastCompleted: new Date().toISOString(),
-            checklist: routine.checklist.map(item => ({ ...item, completed: true }))
-          }
-        : routine
-    );
-    saveRoutines(updatedRoutines);
-    addActivity('routine', 'Concluída', title);
-    toast({
-      title: "Parabéns!",
-      description: `Rotina "${title}" concluída com sucesso`
-    });
+    const routine = routines.find(r => r.id === id);
+    if (routine) {
+      const updatedRoutine = { 
+        ...routine, 
+        lastCompleted: new Date().toISOString(),
+        checklist: routine.checklist.map(item => ({ ...item, completed: true }))
+      };
+      updateRoutine(updatedRoutine);
+      
+      // Adicionando atividade através do storageService
+      storageService.addActivity('routine', 'Concluída', title);
+      
+      toast({
+        title: "Parabéns!",
+        description: `Rotina "${title}" concluída com sucesso`
+      });
+    }
   };
 
   const resetRoutineProgress = (id: string) => {
-    const updatedRoutines = routines.map(routine => 
-      routine.id === id 
-        ? { 
-            ...routine, 
-            checklist: routine.checklist.map(item => ({ ...item, completed: false }))
-          }
-        : routine
-    );
-    saveRoutines(updatedRoutines);
+    const routine = routines.find(r => r.id === id);
+    if (routine) {
+      const updatedRoutine = { 
+        ...routine, 
+        checklist: routine.checklist.map(item => ({ ...item, completed: false }))
+      };
+      updateRoutine(updatedRoutine);
+    }
   };
 
   const addChecklistItem = () => {
@@ -527,9 +507,10 @@ export default function Routines() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(routine.id, routine.title)}>
+                          <AlertDialogAction onClick={() => handleDelete(routine.id)}>
                             Excluir
                           </AlertDialogAction>
+
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

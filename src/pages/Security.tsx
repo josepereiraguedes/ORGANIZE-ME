@@ -66,9 +66,9 @@ export default function Security() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = () => {
       try {
-        const data = JSON.parse(e.target?.result as string);
+        const data = JSON.parse(reader.result as string);
         
         if (data.logins) localStorage.setItem('logins', data.logins);
         if (data.tasks) localStorage.setItem('tasks', data.tasks);
@@ -83,7 +83,8 @@ export default function Security() {
         });
         
         setTimeout(() => window.location.reload(), 1000);
-      } catch (error) {
+      } catch (err) {
+        console.error('Erro ao importar dados:', err);
         toast({
           title: "Erro",
           description: "Arquivo de backup inválido",
@@ -105,8 +106,8 @@ export default function Security() {
 
   const storageSize = () => {
     let total = 0;
-    for (let key in localStorage) {
-      if (localStorage.hasOwnProperty(key)) {
+    for (const key in localStorage) {
+      if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
         total += localStorage[key].length + key.length;
       }
     }

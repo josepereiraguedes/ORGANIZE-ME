@@ -10,7 +10,7 @@ import {
   Zap,
   Calendar
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -42,10 +42,10 @@ const quickActions = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
-  const location = useLocation();
-  const currentPath = location.pathname;
+  
+  // Sempre mostrar os textos quando a sidebar estiver expandida (aplicativo web)
+  const showText = state !== "collapsed";
 
-  const isActive = (path: string) => currentPath === path;
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive 
       ? "bg-primary/10 text-primary font-medium hover:bg-primary/20" 
@@ -60,7 +60,7 @@ export function AppSidebar() {
             <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
               <Shield className="w-4 h-4 text-white" />
             </div>
-            {state !== "collapsed" && (
+            {showText && (
               <div>
                 <h2 className="font-semibold text-sm">OrganizerPro</h2>
                 <p className="text-xs text-muted-foreground">Sua vida organizada</p>
@@ -71,7 +71,7 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Principal
+            {showText && "Principal"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -84,7 +84,7 @@ export function AppSidebar() {
                       className={getNavCls}
                     >
                       <item.icon className="h-4 w-4 flex-shrink-0" />
-                      {state !== "collapsed" && <span className="truncate">{item.title}</span>}
+                      {showText && <span className="truncate">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -95,7 +95,7 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Ferramentas
+            {showText && "Ferramentas"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -108,7 +108,7 @@ export function AppSidebar() {
                       className={getNavCls}
                     >
                       <item.icon className="h-4 w-4 flex-shrink-0" />
-                      {state !== "collapsed" && <span className="truncate">{item.title}</span>}
+                      {showText && <span className="truncate">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -120,7 +120,7 @@ export function AppSidebar() {
         {/* User Section */}
         <div className="mt-auto p-4 border-t border-border/50 space-y-3">
           <div className="flex items-center justify-between">
-            {state !== "collapsed" && (
+            {showText && (
               <span className="text-sm font-medium">Tema</span>
             )}
             <ThemeToggle />
@@ -129,7 +129,7 @@ export function AppSidebar() {
             <div className="w-8 h-8 bg-gradient-accent rounded-full flex items-center justify-center">
               <span className="text-xs font-medium text-white">U</span>
             </div>
-            {state !== "collapsed" && (
+            {showText && (
               <div className="truncate">
                 <p className="text-sm font-medium">Usuário</p>
                 <p className="text-xs text-muted-foreground">usuario@email.com</p>

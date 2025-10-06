@@ -1,63 +1,89 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Zap, Clock, Bell, Repeat, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { storageService } from '@/services/storageService';
+import { AutomationRule } from '@/lib/storage';
 
-interface AutomationRule {
-  id: string;
-  title: string;
-  description: string;
-  icon: any;
-  enabled: boolean;
+interface IconMap {
+  [key: string]: React.ComponentType<{ className?: string }>;
 }
+
+const iconMap: IconMap = {
+  'Clock': Clock,
+  'Bell': Bell,
+  'Repeat': Repeat,
+  'CheckCircle2': CheckCircle2
+};
 
 export default function Automation() {
   const { toast } = useToast();
-  const [automations, setAutomations] = useState<AutomationRule[]>([
-    {
-      id: 'daily-backup',
-      title: 'Backup Automático Diário',
-      description: 'Cria backup dos seus dados automaticamente todos os dias',
-      icon: Clock,
-      enabled: false
-    },
-    {
-      id: 'task-reminder',
-      title: 'Lembrete de Tarefas',
-      description: 'Notifica sobre tarefas pendentes próximas do prazo',
-      icon: Bell,
-      enabled: false
-    },
-    {
-      id: 'routine-check',
-      title: 'Verificação de Rotinas',
-      description: 'Lembra você de executar suas rotinas diárias',
-      icon: Repeat,
-      enabled: false
-    },
-    {
-      id: 'auto-complete',
-      title: 'Auto-completar Rotinas',
-      description: 'Marca rotinas como completas automaticamente',
-      icon: CheckCircle2,
-      enabled: false
+  
+  // Carregar automações do storageService ou usar padrão
+  const loadAutomations = (): AutomationRule[] => {
+    try {
+      const saved = storageService.loadAutomations();
+      if (saved) {
+        return saved;
+      }
+    } catch {
+      // Se houver erro, retorna o padrão
     }
-  ]);
+    
+    return [
+      {
+        id: 'daily-backup',
+        title: 'Backup Automático Diário',
+        description: 'Cria backup dos seus dados automaticamente todos os dias',
+        icon: 'Clock',
+        enabled: false
+      },
+      {
+        id: 'task-reminder',
+        title: 'Lembrete de Tarefas',
+        description: 'Notifica sobre tarefas pendentes próximas do prazo',
+        icon: 'Bell',
+        enabled: false
+      },
+      {
+        id: 'routine-check',
+        title: 'Verificação de Rotinas',
+        description: 'Lembra você de executar suas rotinas diárias',
+        icon: 'Repeat',
+        enabled: false
+      },
+      {
+        id: 'auto-complete',
+        title: 'Auto-completar Rotinas',
+        description: 'Marca rotinas como completas automaticamente',
+        icon: 'CheckCircle2',
+        enabled: false
+      }
+    ];
+  };
+  
+  const [automations, setAutomations] = useState<AutomationRule[]>(loadAutomations);
+  
+  // Salvar automações no storageService sempre que mudarem
+  useEffect(() => {
+    storageService.saveAutomations(automations);
+  }, [automations]);
 
   const toggleAutomation = (id: string) => {
-    setAutomations(prev => 
-      prev.map(auto => 
+    setAutomations(prev => {
+      const updated = prev.map(auto => 
         auto.id === id ? { ...auto, enabled: !auto.enabled } : auto
-      )
-    );
-    
-    const automation = automations.find(a => a.id === id);
-    toast({
-      title: automation?.enabled ? "Automação desativada" : "Automação ativada",
-      description: automation?.title
+      );
+      
+      // Encontrar a automação atualizada para a mensagem do toast
+      const automation = updated.find(a => a.id === id);
+      toast({
+        title: automation && !automation.enabled ? "Automação desativada" : "Automação ativada",
+        description: automation?.title
+      });
+      
+      return updated;
     });
   };
 
@@ -74,14 +100,14 @@ export default function Automation() {
 
       <div className="grid grid-cols-1 gap-4">
         {automations.map((automation) => {
-          const Icon = automation.icon;
+          const Icon = iconMap[automation.icon];
           return (
             <Card key={automation.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-primary/10 rounded-lg">
-                      <Icon className="h-5 w-5 text-primary" />
+                      {Icon && <Icon className="h-5 w-5 text-primary" />}
                     </div>
                     <div>
                       <CardTitle className="text-lg">{automation.title}</CardTitle>

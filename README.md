@@ -29,10 +29,13 @@ git clone <YOUR_GIT_URL>
 # Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
+# Step 3: Create a .env file from the example.
+cp .env.example .env
+
+# Step 4: Install the necessary dependencies.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 5: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
@@ -59,6 +62,63 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Context API for state management
+- CryptoJS for enhanced security
+
+## Environment Variables
+
+The project uses environment variables for configuration. Copy the `.env.example` file to `.env` and adjust the values as needed:
+
+```bash
+cp .env.example .env
+```
+
+Refer to `.env.example` for all available configuration options.
+
+## Testing
+
+The project includes unit and integration tests using Vitest and Testing Library:
+
+```bash
+# Run all tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests once
+npm run test:run
+```
+
+Tests are located in `src/**/*.test.ts` and `src/**/*.test.tsx` files.
+
+## Improvements Made
+
+This project has been enhanced with several improvements:
+
+1. **Enhanced Security**: 
+   - Implemented AES encryption using CryptoJS for sensitive data
+   - Centralized security functions in a dedicated service
+
+2. **State Management**:
+   - Added Context API for global state management
+   - Created a centralized AppContext for all data operations
+
+3. **Code Structure**:
+   - Refactored large components into smaller, more manageable pieces
+   - Created a service layer for data operations
+   - Removed duplicate files and code
+
+4. **Type Safety**:
+   - Enabled strict TypeScript settings
+   - Improved type definitions throughout the application
+
+5. **Performance**:
+   - Optimized component rendering
+   - Reduced unnecessary re-renders
 
 ## How can I deploy this project?
 

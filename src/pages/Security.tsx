@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Shield, Lock, Eye, EyeOff, Download, Upload, Trash2, Settings } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Download, Upload, Trash2, Settings, User, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -20,6 +20,13 @@ export default function Security() {
   const [encryptData, setEncryptData] = useState(() => {
     return localStorage.getItem('encryptData') === 'true';
   });
+  const [userName, setUserName] = useState(() => {
+    return localStorage.getItem('userName') || '';
+  });
+  const [userPhoto, setUserPhoto] = useState<string | null>(() => {
+    return localStorage.getItem('userPhoto') || null;
+  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -114,6 +121,71 @@ export default function Security() {
     return (total / 1024).toFixed(2);
   };
 
+  const handleSaveProfile = () => {
+    if (userName.trim()) {
+      localStorage.setItem('userName', userName.trim());
+      toast({
+        title: "Perfil atualizado",
+        description: "Suas informações foram salvas com sucesso"
+      });
+      
+      // Atualizar o nome do usuário em tempo real
+      window.dispatchEvent(new CustomEvent('userNameUpdated', { detail: userName.trim() }));
+    }
+  };
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Verificar se o arquivo é uma imagem
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um arquivo de imagem válido",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verificar tamanho do arquivo (máximo 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Erro",
+        description: "A imagem deve ter no máximo 2MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageData = e.target?.result as string;
+      setUserPhoto(imageData);
+      localStorage.setItem('userPhoto', imageData);
+      toast({
+        title: "Foto atualizada",
+        description: "Sua foto de perfil foi atualizada com sucesso"
+      });
+      
+      // Atualizar a foto do usuário em tempo real
+      window.dispatchEvent(new CustomEvent('userPhotoUpdated', { detail: imageData }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setUserPhoto(null);
+    localStorage.removeItem('userPhoto');
+    toast({
+      title: "Foto removida",
+      description: "Sua foto de perfil foi removida"
+    });
+    
+    // Remover a foto do usuário em tempo real
+    window.dispatchEvent(new CustomEvent('userPhotoUpdated', { detail: null }));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -121,6 +193,75 @@ export default function Security() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Perfil do Usuário */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              <CardTitle>Perfil do Usuário</CardTitle>
+            </div>
+            <CardDescription>
+              Gerencie suas informações de perfil
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full bg-gradient-accent flex items-center justify-center overflow-hidden">
+                  {userPhoto ? (
+                    <img 
+                      src={userPhoto} 
+                      alt="Foto do usuário" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-12 h-12 text-white" />
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="absolute bottom-0 right-0 rounded-full w-8 h-8"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Camera className="w-4 h-4" />
+                </Button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                />
+              </div>
+              {userPhoto && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleRemovePhoto}
+                >
+                  Remover Foto
+                </Button>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="user-name">Nome</Label>
+              <Input
+                id="user-name"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Seu nome"
+              />
+            </div>
+            
+            <Button onClick={handleSaveProfile} className="w-full">
+              Salvar Perfil
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">

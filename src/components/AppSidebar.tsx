@@ -8,9 +8,11 @@ import {
   Home,
   Shield,
   Zap,
-  Calendar
+  Calendar,
+  User,
+  LogOut
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +25,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Logo } from "@/components/Logo";
+import { useEffect, useState } from "react";
 
 const navigationItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -42,14 +46,60 @@ const quickActions = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
+  const navigate = useNavigate();
+  const [userName, setUserName] = useState('Usuário');
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
+  
+  // Obter dados do usuário do localStorage
+  useEffect(() => {
+    const savedUserName = localStorage.getItem('userName');
+    const savedUserPhoto = localStorage.getItem('userPhoto');
+    
+    if (savedUserName) {
+      setUserName(savedUserName);
+    }
+    
+    if (savedUserPhoto) {
+      setUserPhoto(savedUserPhoto);
+    }
+    
+    // Ouvir eventos de atualização do nome e foto do usuário
+    const handleUserNameUpdate = (event: CustomEvent) => {
+      setUserName(event.detail);
+    };
+    
+    const handleUserPhotoUpdate = (event: CustomEvent) => {
+      setUserPhoto(event.detail);
+    };
+    
+    window.addEventListener('userNameUpdated', handleUserNameUpdate as EventListener);
+    window.addEventListener('userPhotoUpdated', handleUserPhotoUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('userNameUpdated', handleUserNameUpdate as EventListener);
+      window.removeEventListener('userPhotoUpdated', handleUserPhotoUpdate as EventListener);
+    };
+  }, []);
   
   // Sempre mostrar os textos quando a sidebar estiver expandida (aplicativo web)
   const showText = state !== "collapsed";
-
+  
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive 
       ? "bg-primary/10 text-primary font-medium hover:bg-primary/20" 
       : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
+
+  const handleLogout = () => {
+    // Remover dados do usuário do localStorage
+    localStorage.removeItem('hasVisited');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userTheme');
+    localStorage.removeItem('userPhoto');
+    
+    // Redirecionar para a página de login
+    navigate('/');
+    window.location.reload();
+  };
 
   return (
     <Sidebar className={state === "collapsed" ? "w-16" : "w-64"}>
@@ -57,15 +107,7 @@ export function AppSidebar() {
         {/* Logo/Brand */}
         <div className="p-4 border-b border-border/50">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            {showText && (
-              <div>
-                <h2 className="font-semibold text-sm">OrganizerPro</h2>
-                <p className="text-xs text-muted-foreground">Sua vida organizada</p>
-              </div>
-            )}
+            <Logo />
           </div>
         </div>
 
@@ -126,16 +168,49 @@ export function AppSidebar() {
             <ThemeToggle />
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-accent rounded-full flex items-center justify-center">
-              <span className="text-xs font-medium text-white">U</span>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
+              {userPhoto ? (
+                <img 
+                  src={userPhoto} 
+                  alt="Foto do usuário" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-gradient-accent rounded-full flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              )}
             </div>
             {showText && (
               <div className="truncate">
-                <p className="text-sm font-medium">Usuário</p>
-                <p className="text-xs text-muted-foreground">usuario@email.com</p>
+                <p className="text-sm font-medium">{userName}</p>
+                <div className="flex gap-2 mt-1">
+                  <NavLink to="/security" className="text-xs text-muted-foreground hover:text-foreground">
+                    Editar perfil
+                  </NavLink>
+                  <button 
+                    onClick={handleLogout}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    Sair
+                  </button>
+                </div>
               </div>
             )}
           </div>
+          {/* Botão de logout para modo colapsado */}
+          {!showText && (
+            <div className="flex justify-center">
+              <button 
+                onClick={handleLogout}
+                className="p-2 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                title="Sair"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </SidebarContent>
     </Sidebar>

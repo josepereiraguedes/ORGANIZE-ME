@@ -14,10 +14,20 @@ import {
 } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 export function Dashboard() {
   const { logins, tasks, routines, notes } = useAppContext();
   const navigate = useNavigate();
+  const [userName, setUserName] = useState('usuário');
+  
+  // Obter nome do usuário do localStorage
+  useEffect(() => {
+    const savedUserName = localStorage.getItem('userName');
+    if (savedUserName) {
+      setUserName(savedUserName);
+    }
+  }, []);
   
   const quickStats = [
     {
@@ -88,16 +98,13 @@ export function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold bg-gradient-hero bg-clip-text text-transparent">
-            Dashboard
+            Olá, {userName}!
           </h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            Bem-vindo de volta! Aqui está o resumo da sua organização pessoal.
+            Aqui está o resumo da sua organização pessoal.
           </p>
         </div>
-        <Button className="btn-gradient w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Adicionar Item
-        </Button>
+        {/* Botão "+ Adicionar Item" removido conforme solicitado */}
       </div>
 
       {/* Quick Stats */}

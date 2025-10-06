@@ -1,34 +1,24 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { FloatingIcons } from "@/components/FloatingIcons";
+import { useLocation } from "react-router-dom";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
+  const location = useLocation();
+  // Apenas a página de primeiro acesso (login) não deve mostrar ícones flutuantes
+  const isLoginPage = location.pathname === '/' && !localStorage.getItem('hasVisited');
+  
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative">
+        <FloatingIcons />
         <AppSidebar />
         
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-border/50 sticky top-0 z-50">
-            <div className="flex items-center gap-2 md:gap-4">
-              <SidebarTrigger className="md:hidden" />
-              <div className="relative w-full max-w-xs md:max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Busca..." 
-                  className="pl-9 bg-muted/50 border-none text-sm md:text-base"
-                />
-              </div>
-            </div>
-            
-          </header>
-
+        <div className="flex-1 flex flex-col relative z-10">
           {/* Main content */}
           <main className="flex-1 p-4 md:p-6 overflow-auto">
             {children}

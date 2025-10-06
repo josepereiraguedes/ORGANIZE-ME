@@ -237,6 +237,24 @@ All colors MUST be HSL.
   .kanban-card:hover {
     transform: translateY(-2px);
   }
+  
+  /* Logo visibility fixes */
+  .logo-text {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+  
+  /* Login page layout */
+  .login-container {
+    @apply min-h-screen flex items-center justify-center p-4 md:p-8 overflow-hidden relative;
+  }
+  
+  .login-content {
+    @apply w-full md:w-2/5 flex flex-col items-center justify-center z-10;
+  }
+  
+  .login-icons {
+    @apply hidden md:flex md:w-3/5 items-center justify-center relative;
+  }
 }
 
 @keyframes fadeIn {

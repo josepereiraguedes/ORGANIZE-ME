@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Design minimalista que funciona em ambos os modos -->
+  
+  <!-- Quadrado externo -->
+  <rect x="15" y="15" width="70" height="70" rx="10" fill="#3b82f6"/>
+  
+  <!-- Linhas horizontais representando listas/organização -->
+  <rect x="25" y="25" width="50" height="5" fill="white"/>
+  <rect x="25" y="35" width="50" height="5" fill="white"/>
+  <rect x="25" y="45" width="50" height="5" fill="white"/>
+  <rect x="25" y="55" width="30" height="5" fill="white"/>
+  
+  <!-- Checkmark simples -->
+  <path d="M60 65 L65 70 L75 60" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

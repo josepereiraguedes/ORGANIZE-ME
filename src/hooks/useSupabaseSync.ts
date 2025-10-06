@@ -1,5 +1,4 @@
 import { useEffect, useCallback } from 'react'
-import { useAppContext } from '@/contexts/AppContext'
 import { 
   supabaseLoginService, 
   supabaseTaskService, 
@@ -8,21 +7,15 @@ import {
   supabaseFavoriteService,
   syncLocalDataWithSupabase
 } from '@/services/supabase/supabaseService'
+import { LoginItem, TaskItem, RoutineItem, NoteItem, FavoriteItem } from '@/lib/storage'
 
-export const useSupabaseSync = () => {
-  const {
-    logins,
-    tasks,
-    routines,
-    notes,
-    favorites,
-    loadLogins,
-    loadTasks,
-    loadRoutines,
-    loadNotes,
-    loadFavorites
-  } = useAppContext()
-
+export const useSupabaseSync = (
+  logins: LoginItem[],
+  tasks: TaskItem[],
+  routines: RoutineItem[],
+  notes: NoteItem[],
+  favorites: FavoriteItem[]
+) => {
   // Função para sincronizar dados locais com o Supabase
   const syncLocalData = useCallback(async () => {
     try {
@@ -61,15 +54,6 @@ export const useSupabaseSync = () => {
       console.error('Failed to load data from Supabase:', error)
     }
   }, [])
-
-  // Efeito para sincronizar dados quando o componente monta
-  useEffect(() => {
-    // Sincronizar dados locais com o Supabase quando o app inicializa
-    syncLocalData()
-    
-    // Opcionalmente, carregar dados do Supabase
-    // loadSupabaseData()
-  }, [syncLocalData, loadSupabaseData])
 
   return {
     syncLocalData,

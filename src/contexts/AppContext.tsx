@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { LoginItem, TaskItem, RoutineItem, NoteItem, FavoriteItem, ActivityItem } from '@/lib/storage';
 import { storageService } from '@/services/storageService';
-import { useSupabaseSync } from '@/hooks/useSupabaseSync';
+import { 
+  supabaseLoginService, 
+  supabaseTaskService, 
+  supabaseRoutineService, 
+  supabaseNoteService, 
+  supabaseFavoriteService,
+  syncLocalDataWithSupabase
+} from '@/services/supabase/supabaseService';
 
 // Definição dos tipos de estado
 interface AppState {
@@ -187,8 +194,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // Provider do contexto
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const { syncLocalData, loadSupabaseData } = useSupabaseSync();
-
+  
   // Funções para carregar dados
   const loadLogins = () => {
     const logins = storageService.getLogins();
@@ -218,15 +224,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadActivities = () => {
     const activities = storageService.getActivities();
     dispatch({ type: 'SET_ACTIVITIES', payload: activities });
-  };
-
-  // Funções de sincronização com Supabase
-  const syncWithSupabase = async () => {
-    await syncLocalData();
-  };
-
-  const loadFromSupabase = async () => {
-    await loadSupabaseData();
   };
 
   // Carregar todos os dados na inicialização
@@ -371,6 +368,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       storageService.saveFavorites(updatedFavorites);
       dispatch({ type: 'DELETE_FAVORITE', payload: id });
       storageService.addActivity('favorite', 'Excluído', favoriteToDelete.title);
+    }
+  };
+
+  // Funções de sincronização com Supabase
+  const syncWithSupabase = async () => {
+    try {
+      await syncLocalDataWithSupabase(state.logins, state.tasks, state.routines, state.notes, state.favorites);
+      console.log('Local data synchronized with Supabase');
+    } catch (error) {
+      console.error('Failed to sync local data with Supabase:', error);
+    }
+  };
+
+  const loadFromSupabase = async () => {
+    try {
+      // Carregar dados do Supabase
+      const supabaseLogins = await supabaseLoginService.getAll();
+      const supabaseTasks = await supabaseTaskService.getAll();
+      const supabaseRoutines = await supabaseRoutineService.getAll();
+      const supabaseNotes = await supabaseNoteService.getAll();
+      const supabaseFavorites = await supabaseFavoriteService.getAll();
+      
+      // Atualizar o estado local com os dados do Supabase
+      console.log('Data loaded from Supabase:', {
+        logins: supabaseLogins.length,
+        tasks: supabaseTasks.length,
+        routines: supabaseRoutines.length,
+        notes: supabaseNotes.length,
+        favorites: supabaseFavorites.length
+      });
+      
+      // Aqui você pode decidir como integrar os dados do Supabase com os dados locais
+      // Por exemplo, você pode atualizar o estado local ou mostrar uma opção para o usuário
+      
+    } catch (error) {
+      console.error('Failed to load data from Supabase:', error);
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { LoginItem, TaskItem, RoutineItem, NoteItem, FavoriteItem, ActivityItem } from '@/lib/storage';
 import { storageService } from '@/services/storageService';
+import { useSupabaseSync } from '@/hooks/useSupabaseSync';
 
 // Definição dos tipos de estado
 interface AppState {
@@ -174,6 +175,10 @@ interface AppContextType extends AppState {
   addFavorite: (favorite: FavoriteItem) => void;
   updateFavorite: (favorite: FavoriteItem) => void;
   deleteFavorite: (id: string) => void;
+  
+  // Funções de sincronização com Supabase
+  syncWithSupabase: () => Promise<void>;
+  loadFromSupabase: () => Promise<void>;
 }
 
 // Criação do contexto
@@ -182,6 +187,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // Provider do contexto
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const { syncLocalData, loadSupabaseData } = useSupabaseSync();
 
   // Funções para carregar dados
   const loadLogins = () => {
@@ -212,6 +218,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadActivities = () => {
     const activities = storageService.getActivities();
     dispatch({ type: 'SET_ACTIVITIES', payload: activities });
+  };
+
+  // Funções de sincronização com Supabase
+  const syncWithSupabase = async () => {
+    await syncLocalData();
+  };
+
+  const loadFromSupabase = async () => {
+    await loadSupabaseData();
   };
 
   // Carregar todos os dados na inicialização
@@ -383,7 +398,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteNote,
         addFavorite,
         updateFavorite,
-        deleteFavorite
+        deleteFavorite,
+        syncWithSupabase,
+        loadFromSupabase
       }}
     >
       {children}

@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -29,28 +28,3 @@
   },
   "include": ["src"]
 }
-=======
-    "compilerOptions": {
-      "target": "ES2020",
-      "useDefineForClassFields": true,
-      "lib": ["ES2020", "DOM", "DOM.Iterable"],
-      "module": "ESNext",
-      "skipLibCheck": true,
-
-      /* Bundler mode */
-      "moduleResolution": "bundler",
-      "allowImportingTsExtensions": true,
-      "isolatedModules": true,
-      "moduleDetection": "force",
-      "noEmit": true,
-      "jsx": "react-jsx",
-
-      /* Linting */
-      "strict": true,
-      "noUnusedLocals": true,
-      "noUnusedParameters": true,
-      "noFallthroughCasesInSwitch": true
-    },
-    "include": ["src"]
-  }
->>>>>>> 50c92e3b291624092effd74a4a15ca2bee16abbe

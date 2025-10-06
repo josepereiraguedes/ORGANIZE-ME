@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -48,30 +47,5 @@ const App = () => (
     </AppProvider>
   </QueryClientProvider>
 );
-=======
-import React from 'react';
-import { AuthProvider } from './contexts/AuthContext';
-import { LocalDatabaseProvider } from './contexts/LocalDatabaseContext';
-import { ConfigProvider } from './contexts/ConfigContext';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { NotificationProvider } from './contexts/NotificationContext';
-import AppContent from './AppContent';
-
-function App() {
-  return (
-    <AuthProvider>
-      <ConfigProvider>
-        <ThemeProvider>
-          <NotificationProvider>
-            <LocalDatabaseProvider>
-              <AppContent />
-            </LocalDatabaseProvider>
-          </NotificationProvider>
-        </ThemeProvider>
-      </ConfigProvider>
-    </AuthProvider>
-  );
-}
->>>>>>> 50c92e3b291624092effd74a4a15ca2bee16abbe
 
 export default App;

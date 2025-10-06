@@ -1,0 +1,5 @@
+[33mb58b963[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Initial commit: Sistema de gestão para Atelie
+[33mf6f635a[m Finalização da migração para sistema totalmente local - Remoção de dependências do Supabase e implementação de armazenamento local
+[33mca8ba1f[m Atualização completa do sistema - Correções de autenticação, persistência de sessão e integração com Supabase
+[33md383f33[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Correções: Ordenação correta das datas no Dashboard e adição da coluna de quantidade nas transações
+[33m322ef37[m Atualização completa do projeto - Adiciona arquivos de configuração e corrige .gitignore

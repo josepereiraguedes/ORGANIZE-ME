@@ -1,13 +1,11 @@
 /// <reference types="vite/client" />
-<<<<<<< HEAD
-=======
 
 interface ImportMetaEnv {
   readonly VITE_APP_TITLE: string
-  // Adicione outras variáveis de ambiente aqui se necessário
+  readonly NODE_ENV: string
+  // Adicione outras variáveis de ambiente conforme necessário
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
->>>>>>> 50c92e3b291624092effd74a4a15ca2bee16abbe
